@@ -71,21 +71,18 @@ export class AmazonService {
       const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
       const dateStamp = amzDate.slice(0, 8);
       
-      // Create the canonical request payload according to Amazon's docs
+      // Create the canonical request payload according to Amazon's examples
       const payload = JSON.stringify({
         "Keywords": keyword,
         "Resources": [
           "Images.Primary.Large",
           "ItemInfo.Title",
           "ItemInfo.Features",
+          "ItemInfo.ByLineInfo",
           "ItemInfo.ContentInfo",
           "ItemInfo.ProductInfo",
-          "ItemInfo.TechnicalInfo",
-          "ItemInfo.ExternalIds",
           "Offers.Listings.Price",
-          "Offers.Summaries", 
-          "BrowseNodeInfo.BrowseNodes",
-          "CustomerReviews"
+          "Offers.Summaries"
         ],
         "PartnerTag": settings.partnerId,
         "PartnerType": "Associates",
@@ -93,8 +90,7 @@ export class AmazonService {
         "Operation": "SearchItems",
         "ItemCount": count,
         "MinReviewsRating": 4,  // Added to ensure good quality products
-        "SearchIndex": "All",
-        "SortBy": "Relevance"   // Added according to docs to get most relevant results
+        "SearchIndex": "All"
       });
       
       // Create the canonical request headers
@@ -172,13 +168,8 @@ export class AmazonService {
       const products: AmazonProduct[] = [];
       
       if (data.SearchResult && data.SearchResult.Items) {
-        // Filter products with at least 100 ratings and 4.3+ stars
-        const qualifiedProducts = data.SearchResult.Items.filter((item: any) => {
-          const hasReviews = item.CustomerReviews && 
-                            item.CustomerReviews.Count >= 100 && 
-                            item.CustomerReviews.StarRating >= 4.3;
-          return hasReviews;
-        });
+        // Since we're using MinReviewsRating in the API call, we don't need to filter further
+        const qualifiedProducts = data.SearchResult.Items;
         
         for (const item of qualifiedProducts.slice(0, count)) {
           const asin = item.ASIN;

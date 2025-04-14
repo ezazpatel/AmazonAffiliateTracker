@@ -1,5 +1,6 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, primaryKey, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { relations } from "drizzle-orm";
 import { z } from "zod";
 
 // Keywords table to store upload CSV data
@@ -21,13 +22,21 @@ export const insertKeywordSchema = createInsertSchema(keywords).omit({
 // Articles table to store generated content
 export const articles = pgTable("articles", {
   id: serial("id").primaryKey(),
-  keywordId: integer("keyword_id").notNull(),
+  keywordId: integer("keyword_id").notNull().references(() => keywords.id),
   title: text("title").notNull(),
   content: text("content").notNull(),
   snippet: text("snippet"),
   status: text("status").notNull().default("draft"), // draft, published
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const articlesRelations = relations(articles, ({ one, many }) => ({
+  keyword: one(keywords, {
+    fields: [articles.keywordId],
+    references: [keywords.id],
+  }),
+  products: many(products),
+}));
 
 export const insertArticleSchema = createInsertSchema(articles).omit({
   id: true,
@@ -37,7 +46,7 @@ export const insertArticleSchema = createInsertSchema(articles).omit({
 // Products table to store Amazon product data
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
-  articleId: integer("article_id").notNull(),
+  articleId: integer("article_id").notNull().references(() => articles.id),
   asin: text("asin").notNull(),
   title: text("title").notNull(),
   description: text("description"),
@@ -45,6 +54,13 @@ export const products = pgTable("products", {
   affiliateLink: text("affiliate_link").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const productsRelations = relations(products, ({ one }) => ({
+  article: one(articles, {
+    fields: [products.articleId],
+    references: [articles.id],
+  }),
+}));
 
 export const insertProductSchema = createInsertSchema(products).omit({
   id: true,

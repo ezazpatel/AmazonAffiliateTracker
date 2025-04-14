@@ -8,8 +8,18 @@ import {
   type Activity,
   type InsertActivity,
   type ApiSettings,
-  type InsertApiSettings
+  type InsertApiSettings,
+  type User,
+  type InsertUser,
+  keywords,
+  articles,
+  products,
+  activities,
+  apiSettings,
+  users
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, like, desc, sql, asc } from "drizzle-orm";
 
 export interface IStorage {
   // Keywords
@@ -42,63 +52,16 @@ export interface IStorage {
   saveApiSettings(settings: InsertApiSettings): Promise<ApiSettings>;
   
   // User methods from base interface
-  getUser(id: number): Promise<any | undefined>;
-  getUserByUsername(username: string): Promise<any | undefined>;
-  createUser(user: any): Promise<any>;
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
 }
 
-export class MemStorage implements IStorage {
-  private keywords: Map<number, Keyword>;
-  private articles: Map<number, Article>;
-  private products: Map<number, Product>;
-  private activities: Map<number, Activity>;
-  private apiSettings?: ApiSettings;
-  private users: Map<number, any>;
-  
-  private currentKeywordId: number;
-  private currentArticleId: number;
-  private currentProductId: number;
-  private currentActivityId: number;
-  private currentUserId: number;
-  
-  constructor() {
-    this.keywords = new Map();
-    this.articles = new Map();
-    this.products = new Map();
-    this.activities = new Map();
-    this.users = new Map();
-    
-    this.currentKeywordId = 1;
-    this.currentArticleId = 1;
-    this.currentProductId = 1;
-    this.currentActivityId = 1;
-    this.currentUserId = 1;
-    
-    // Add some sample activities
-    this.addActivity({
-      activityType: "article_generated",
-      message: "Article \"Best Gaming Chairs for 2023\" was successfully generated",
-    });
-    
-    this.addActivity({
-      activityType: "csv_imported",
-      message: "Successfully imported 12 keywords from tech_products.csv",
-    });
-    
-    this.addActivity({
-      activityType: "api_warning",
-      message: "Anthropic API credit usage at 75%, consider upgrading your plan",
-    });
-    
-    this.addActivity({
-      activityType: "generation_failed",
-      message: "Failed to generate article \"Best Budget Laptops\" due to Amazon API timeout",
-    });
-  }
-  
+export class DatabaseStorage implements IStorage {
   // Keywords
   async getKeyword(id: number): Promise<Keyword | undefined> {
-    return this.keywords.get(id);
+    const [keyword] = await db.select().from(keywords).where(eq(keywords.id, id));
+    return keyword;
   }
   
   async getKeywords(
@@ -107,90 +70,97 @@ export class MemStorage implements IStorage {
     search: string = "", 
     status: string = "all"
   ): Promise<{ keywords: Keyword[], total: number }> {
-    let filteredKeywords = Array.from(this.keywords.values());
+    let conditions = [];
     
     if (search) {
-      const searchLower = search.toLowerCase();
-      filteredKeywords = filteredKeywords.filter(keyword => 
-        keyword.primaryKeyword.toLowerCase().includes(searchLower)
-      );
+      conditions.push(like(keywords.primaryKeyword, `%${search}%`));
     }
     
     if (status && status !== "all") {
-      filteredKeywords = filteredKeywords.filter(keyword => 
-        keyword.status === status
-      );
+      conditions.push(eq(keywords.status, status));
     }
     
-    // Sort by most recent
-    filteredKeywords = filteredKeywords.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    let query = db.select().from(keywords);
+    let countQuery = db.select({ count: sql<number>`count(*)` }).from(keywords);
     
-    const paginatedKeywords = filteredKeywords.slice(offset, offset + limit);
+    if (conditions.length > 0) {
+      const whereClause = conditions.length === 1 
+        ? conditions[0] 
+        : and(...conditions);
+      
+      query = query.where(whereClause);
+      countQuery = countQuery.where(whereClause);
+    }
     
-    return {
-      keywords: paginatedKeywords,
-      total: filteredKeywords.length
+    const keywordsList = await query
+      .orderBy(desc(keywords.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    const [{ count }] = await countQuery;
+    
+    return { 
+      keywords: keywordsList, 
+      total: count 
     };
   }
   
   async getUpcomingKeywords(limit: number = 4): Promise<Keyword[]> {
-    const pendingKeywords = Array.from(this.keywords.values())
-      .filter(keyword => keyword.status === "pending")
-      .sort((a, b) => {
-        // Sort by date and time
-        const dateA = `${a.scheduledDate} ${a.scheduledTime}`;
-        const dateB = `${b.scheduledDate} ${b.scheduledTime}`;
-        return new Date(dateA).getTime() - new Date(dateB).getTime();
-      })
-      .slice(0, limit);
-    
-    return pendingKeywords;
+    return db.select()
+      .from(keywords)
+      .where(eq(keywords.status, "pending"))
+      .orderBy(
+        asc(sql`concat(${keywords.scheduledDate}, ' ', ${keywords.scheduledTime})::timestamp`)
+      )
+      .limit(limit);
   }
   
   async addKeyword(keyword: InsertKeyword): Promise<Keyword> {
-    const id = this.currentKeywordId++;
-    const newKeyword: Keyword = {
-      ...keyword,
-      id,
-      status: "pending",
-      createdAt: new Date(),
-    };
+    const [newKeyword] = await db.insert(keywords)
+      .values(keyword)
+      .returning();
     
-    this.keywords.set(id, newKeyword);
+    // Log activity
+    await this.addActivity({
+      activityType: "keyword_added",
+      message: `New keyword "${keyword.primaryKeyword}" was added`
+    });
+    
     return newKeyword;
   }
   
-  async addKeywords(keywords: InsertKeyword[]): Promise<Keyword[]> {
-    const addedKeywords: Keyword[] = [];
-    
-    for (const keyword of keywords) {
-      const newKeyword = await this.addKeyword(keyword);
-      addedKeywords.push(newKeyword);
+  async addKeywords(keywordsList: InsertKeyword[]): Promise<Keyword[]> {
+    if (keywordsList.length === 0) {
+      return [];
     }
     
-    return addedKeywords;
+    const newKeywords = await db.insert(keywords)
+      .values(keywordsList)
+      .returning();
+    
+    return newKeywords;
   }
   
   async updateKeywordStatus(id: number, status: string): Promise<void> {
-    const keyword = this.keywords.get(id);
-    
-    if (keyword) {
-      keyword.status = status;
-      this.keywords.set(id, keyword);
-    }
+    await db.update(keywords)
+      .set({ status })
+      .where(eq(keywords.id, id));
   }
   
   async countPendingKeywords(): Promise<number> {
-    return Array.from(this.keywords.values())
-      .filter(keyword => keyword.status === "pending")
-      .length;
+    const [{ count }] = await db.select({ 
+      count: sql<number>`count(*)` 
+    })
+    .from(keywords)
+    .where(eq(keywords.status, "pending"));
+    
+    return count;
   }
   
   // Articles
   async getArticle(id: number): Promise<Article | undefined> {
-    return this.articles.get(id);
+    const [article] = await db.select().from(articles).where(eq(articles.id, id));
+    return article;
   }
   
   async getArticles(
@@ -200,144 +170,200 @@ export class MemStorage implements IStorage {
     status: string = "all", 
     keywordId?: number
   ): Promise<{ articles: Article[], total: number }> {
-    let filteredArticles = Array.from(this.articles.values());
+    let conditions = [];
     
     if (search) {
-      const searchLower = search.toLowerCase();
-      filteredArticles = filteredArticles.filter(article => 
-        article.title.toLowerCase().includes(searchLower)
+      conditions.push(
+        sql`(${articles.title} ILIKE ${'%' + search + '%'} OR ${articles.content} ILIKE ${'%' + search + '%'})`
       );
     }
     
     if (status && status !== "all") {
-      filteredArticles = filteredArticles.filter(article => 
-        article.status === status
-      );
+      conditions.push(eq(articles.status, status));
     }
     
     if (keywordId) {
-      filteredArticles = filteredArticles.filter(article => 
-        article.keywordId === keywordId
-      );
+      conditions.push(eq(articles.keywordId, keywordId));
     }
     
-    // Sort by most recent
-    filteredArticles = filteredArticles.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    let query = db.select().from(articles);
+    let countQuery = db.select({ count: sql<number>`count(*)` }).from(articles);
     
-    const paginatedArticles = filteredArticles.slice(offset, offset + limit);
+    if (conditions.length > 0) {
+      const whereClause = conditions.length === 1 
+        ? conditions[0] 
+        : and(...conditions);
+      
+      query = query.where(whereClause);
+      countQuery = countQuery.where(whereClause);
+    }
     
-    return {
-      articles: paginatedArticles,
-      total: filteredArticles.length
+    const articlesList = await query
+      .orderBy(desc(articles.createdAt))
+      .limit(limit)
+      .offset(offset);
+    
+    const [{ count }] = await countQuery;
+    
+    return { 
+      articles: articlesList, 
+      total: count 
     };
   }
   
   async addArticle(article: InsertArticle): Promise<Article> {
-    const id = this.currentArticleId++;
-    const newArticle: Article = {
-      ...article,
-      id,
-      createdAt: new Date(),
-    };
+    const [newArticle] = await db.insert(articles)
+      .values(article)
+      .returning();
     
-    this.articles.set(id, newArticle);
+    // Log activity
+    await this.addActivity({
+      activityType: "article_generated",
+      message: `New article "${article.title}" was generated`
+    });
+    
     return newArticle;
   }
   
   async countArticles(): Promise<number> {
-    return this.articles.size;
+    const [{ count }] = await db.select({ 
+      count: sql<number>`count(*)` 
+    })
+    .from(articles);
+    
+    return count;
   }
   
   // Products
   async getProduct(id: number): Promise<Product | undefined> {
-    return this.products.get(id);
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    return product;
   }
   
   async getProductsByArticleId(articleId: number): Promise<Product[]> {
-    return Array.from(this.products.values())
-      .filter(product => product.articleId === articleId);
+    return db.select()
+      .from(products)
+      .where(eq(products.articleId, articleId));
   }
   
   async addProduct(product: InsertProduct): Promise<Product> {
-    const id = this.currentProductId++;
-    const newProduct: Product = {
-      ...product,
-      id,
-      createdAt: new Date(),
-    };
+    const [newProduct] = await db.insert(products)
+      .values(product)
+      .returning();
     
-    this.products.set(id, newProduct);
     return newProduct;
   }
   
   async countProducts(): Promise<number> {
-    return this.products.size;
+    const [{ count }] = await db.select({ 
+      count: sql<number>`count(*)` 
+    })
+    .from(products);
+    
+    return count;
   }
   
   // Activities
   async getActivities(limit: number = 10): Promise<Activity[]> {
-    return Array.from(this.activities.values())
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, limit);
+    return db.select()
+      .from(activities)
+      .orderBy(desc(activities.createdAt))
+      .limit(limit);
   }
   
   async addActivity(activity: InsertActivity): Promise<Activity> {
-    const id = this.currentActivityId++;
-    const newActivity: Activity = {
-      ...activity,
-      id,
-      createdAt: new Date(),
-    };
+    const [newActivity] = await db.insert(activities)
+      .values(activity)
+      .returning();
     
-    this.activities.set(id, newActivity);
     return newActivity;
   }
   
   // API Settings
   async getApiSettings(): Promise<ApiSettings | undefined> {
-    return this.apiSettings;
+    const [settings] = await db.select().from(apiSettings).limit(1);
+    return settings;
   }
   
   async saveApiSettings(settings: InsertApiSettings): Promise<ApiSettings> {
-    const now = new Date();
+    const currentSettings = await this.getApiSettings();
     
-    if (this.apiSettings) {
-      this.apiSettings = {
-        ...this.apiSettings,
-        ...settings,
-        updatedAt: now,
-      };
+    if (currentSettings) {
+      // Update existing settings
+      const [updatedSettings] = await db.update(apiSettings)
+        .set({
+          ...settings,
+          updatedAt: new Date()
+        })
+        .where(eq(apiSettings.id, currentSettings.id))
+        .returning();
+      
+      return updatedSettings;
     } else {
-      this.apiSettings = {
-        ...settings,
-        id: 1,
-        createdAt: now,
-        updatedAt: now,
-      };
+      // Create new settings
+      const [newSettings] = await db.insert(apiSettings)
+        .values(settings)
+        .returning();
+      
+      return newSettings;
     }
-    
-    return this.apiSettings;
   }
   
   // User methods from base interface
-  async getUser(id: number): Promise<any | undefined> {
-    return this.users.get(id);
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
-
-  async getUserByUsername(username: string): Promise<any | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
-
-  async createUser(user: any): Promise<any> {
-    const id = this.currentUserId++;
-    const newUser = { ...user, id };
-    this.users.set(id, newUser);
+  
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users)
+      .values(user)
+      .returning();
+    
     return newUser;
   }
 }
 
-export const storage = new MemStorage();
+// Initialize with some sample activities to make the dashboard look nice
+async function seedActivities() {
+  const storage = new DatabaseStorage();
+  
+  try {
+    const activities = await storage.getActivities(1);
+    
+    // Only add initial activities if there are none
+    if (activities.length === 0) {
+      await storage.addActivity({
+        activityType: "article_generated",
+        message: "Article \"Best Gaming Chairs for 2023\" was successfully generated",
+      });
+      
+      await storage.addActivity({
+        activityType: "csv_imported",
+        message: "Successfully imported 12 keywords from tech_products.csv",
+      });
+      
+      await storage.addActivity({
+        activityType: "api_warning",
+        message: "Anthropic API credit usage at 75%, consider upgrading your plan",
+      });
+      
+      await storage.addActivity({
+        activityType: "generation_failed",
+        message: "Failed to generate article \"Best Budget Laptops\" due to Amazon API timeout",
+      });
+    }
+  } catch (error) {
+    console.error("Error seeding initial activities:", error);
+  }
+}
+
+export const storage = new DatabaseStorage();
+
+// Seed initial activities
+seedActivities().catch(console.error);

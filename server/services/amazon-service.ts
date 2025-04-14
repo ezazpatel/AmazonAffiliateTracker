@@ -58,10 +58,11 @@ export class AmazonService {
       const settings = await this.getApiSettings();
       console.log(`Searching Amazon for keyword: ${keyword}`);
       
-      // API endpoint details
+      // API endpoint details - try alternative endpoints
+      // According to Amazon docs, it could be webservices.amazon.com or webservices.amazon.<locale>
       const host = 'webservices.amazon.com';
       const region = 'us-east-1';
-      const uri = '/paapi5/searchitems';
+      const uri = '/paapi5/SearchItems'; // Try capitalizing the endpoint since it's case-sensitive
       const service = 'ProductAdvertisingAPI';
       
       console.log(`Using Amazon credentials - Partner ID: ${settings.partnerId}, API Key: [masked]`);
@@ -167,7 +168,18 @@ export class AmazonService {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Amazon API error response:", errorText);
-        throw new Error(`Amazon API responded with status ${response.status}: ${errorText}`);
+        console.error(`Response status: ${response.status}`);
+        
+        // Provide more specific error messages based on status code
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(`Amazon API authentication failed. Please verify your API credentials. Status: ${response.status}, Details: ${errorText}`);
+        } else if (response.status === 404) {
+          throw new Error(`Amazon API endpoint not found. Check if the API endpoint URL is correct. Status: ${response.status}, Details: ${errorText}`);
+        } else if (response.status >= 500) {
+          throw new Error(`Amazon API server error. This might be a temporary issue with Amazon's servers. Status: ${response.status}, Details: ${errorText}`);
+        } else {
+          throw new Error(`Amazon API responded with status ${response.status}: ${errorText}`);
+        }
       }
       
       const data = await response.json();

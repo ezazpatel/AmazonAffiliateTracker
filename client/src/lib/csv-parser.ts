@@ -1,9 +1,76 @@
+import { z } from "zod";
+
 interface CSVRow {
   primaryKeyword: string;
   scheduledDate: string;
   scheduledTime: string;
   isValid: boolean;
   errors?: string[];
+}
+
+const csvRowSchema = z.object({
+  primary_keyword: z.string().min(1, "Primary keyword is required"),
+  scheduled_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  scheduled_time: z.string().regex(/^\d{2}:\d{2}$/, "Time must be in HH:MM format")
+});
+
+export async function parseCSV(file: File): Promise<{ data: CSVRow[] }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].toLowerCase().trim().split(',');
+        
+        if (!headers.includes('primary_keyword') || !headers.includes('scheduled_date') || !headers.includes('scheduled_time')) {
+          throw new Error('CSV must include primary_keyword, scheduled_date, and scheduled_time columns');
+        }
+        
+        const data: CSVRow[] = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          
+          const values = line.split(',');
+          const row = {
+            primary_keyword: values[headers.indexOf('primary_keyword')]?.trim() || '',
+            scheduled_date: values[headers.indexOf('scheduled_date')]?.trim() || '',
+            scheduled_time: values[headers.indexOf('scheduled_time')]?.trim() || ''
+          };
+          
+          try {
+            csvRowSchema.parse(row);
+            data.push({
+              primaryKeyword: row.primary_keyword,
+              scheduledDate: row.scheduled_date,
+              scheduledTime: row.scheduled_time,
+              isValid: true
+            });
+          } catch (error) {
+            if (error instanceof z.ZodError) {
+              data.push({
+                primaryKeyword: row.primary_keyword,
+                scheduledDate: row.scheduled_date,
+                scheduledTime: row.scheduled_time,
+                isValid: false,
+                errors: error.errors.map(e => e.message)
+              });
+            }
+          }
+        }
+        
+        resolve({ data });
+      } catch (error) {
+        reject(error instanceof Error ? error : new Error('Failed to parse CSV'));
+      }
+    };
+    
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsText(file);
+  });
 }
 
 export async function parseCSV(file: File): Promise<{ data: CSVRow[] }> {

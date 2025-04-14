@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Newspaper, FileText, Clock, Coins } from "lucide-react";
 import StatCard from "@/components/dashboard/StatCard";
-import QuickUpload from "@/components/dashboard/QuickUpload";
 import RecentActivities from "@/components/dashboard/RecentActivities";
 import UpcomingPosts from "@/components/dashboard/UpcomingPosts";
 import ProcessFlow from "@/components/dashboard/ProcessFlow";
@@ -107,9 +106,6 @@ export default function Dashboard() {
     <>
       {/* Overview Stats */}
       {statCards}
-
-      {/* Quick Upload Section */}
-      <QuickUpload />
 
       {/* Recent Activities and Upcoming Posts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

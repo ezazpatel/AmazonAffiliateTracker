@@ -81,6 +81,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
+      console.log("File upload received:", req.file.originalname, req.file.mimetype, req.file.size);
+      console.log("Request body:", req.body);
+
       // Check if selectedRows is provided
       const selectedRowsJSON = req.body.selectedRows;
       let selectedRows = [];
@@ -88,11 +91,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (selectedRowsJSON) {
         try {
           selectedRows = JSON.parse(selectedRowsJSON);
+          console.log("Parsed selected rows:", selectedRows.length);
         } catch (error) {
+          console.error("Error parsing selectedRows JSON:", error);
           return res.status(400).json({ message: "Invalid selected rows format" });
         }
       } else {
         // If no selected rows, parse the entire CSV
+        console.log("No selected rows provided, parsing entire CSV file");
         const fileBuffer = req.file.buffer;
         const results: any[] = [];
         
@@ -108,8 +114,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
               results.push(row);
             })
-            .on("end", () => resolve())
-            .on("error", (error) => reject(error));
+            .on("end", () => {
+              console.log("CSV parsing complete, rows found:", results.length);
+              resolve();
+            })
+            .on("error", (error) => {
+              console.error("Error parsing CSV:", error);
+              reject(error);
+            });
         });
         
         selectedRows = results;
@@ -117,22 +129,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate each row
       const validRows = [];
+      const invalidRows = [];
       
       for (const row of selectedRows) {
         try {
+          // Check if data is present and well-formed
+          if (!row.primaryKeyword || !row.scheduledDate || !row.scheduledTime) {
+            console.log("Missing required fields in row:", row);
+            invalidRows.push(row);
+            continue;
+          }
+          
+          // Ensure dates are in correct format
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(row.scheduledDate)) {
+            console.log("Invalid date format in row:", row);
+            invalidRows.push(row);
+            continue;
+          }
+          
+          // Ensure times are in correct format
+          if (!/^\d{2}:\d{2}$/.test(row.scheduledTime)) {
+            console.log("Invalid time format in row:", row);
+            invalidRows.push(row);
+            continue;
+          }
+          
           const validatedRow = insertKeywordSchema.parse(row);
           validRows.push(validatedRow);
         } catch (error) {
-          // Skip invalid rows
+          console.log("Validation error for row:", row, error);
+          invalidRows.push(row);
         }
       }
       
+      console.log("Valid rows:", validRows.length);
+      console.log("Invalid rows:", invalidRows.length);
+      
       if (validRows.length === 0) {
-        return res.status(400).json({ message: "No valid rows found in the uploaded file" });
+        return res.status(400).json({ 
+          message: "No valid rows found in the uploaded file",
+          details: "Make sure your CSV has the correct format with primary_keyword, scheduled_date, and scheduled_time columns"
+        });
       }
       
       // Save keywords to storage
-      await storage.addKeywords(validRows);
+      const savedKeywords = await storage.addKeywords(validRows);
       
       // Log activity
       await storage.addActivity({
@@ -140,9 +181,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `Successfully imported ${validRows.length} keywords from CSV`,
       });
       
-      res.json({ success: true, count: validRows.length });
+      res.json({ 
+        success: true, 
+        count: validRows.length,
+        invalidCount: invalidRows.length
+      });
     } catch (error) {
-      res.status(500).json({ message: "Failed to process CSV file" });
+      console.error("Error processing CSV upload:", error);
+      res.status(500).json({ 
+        message: "Failed to process CSV file", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
     }
   });
 

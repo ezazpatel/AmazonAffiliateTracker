@@ -82,7 +82,8 @@ export default function CSVUploader() {
   };
 
   const handleFile = async (file: File) => {
-    if (file.type !== "text/csv") {
+    // Allow both text/csv and application/vnd.ms-excel types (some systems save CSVs with Excel mimetype)
+    if (file.type !== "text/csv" && file.type !== "application/vnd.ms-excel" && !file.name.endsWith('.csv')) {
       toast({
         title: "Invalid File Type",
         description: "Please upload a CSV file",
@@ -94,16 +95,33 @@ export default function CSVUploader() {
     setFile(file);
     
     try {
+      console.log("Parsing CSV file:", file.name, file.type, file.size);
+      
       const result = await parseCSV(file);
+      console.log("CSV parsing result:", result);
+      
+      if (result.data.length === 0) {
+        toast({
+          title: "Empty CSV",
+          description: "No valid data rows found in the CSV file",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Default all rows to selected if valid
       setParsedData(result.data);
-      setValidRows(result.data.map(() => true));
-      setSelectedAll(true);
+      setValidRows(result.data.map(row => row.isValid));
+      setSelectedAll(result.data.every(row => row.isValid));
     } catch (error) {
+      console.error("CSV Parsing Error:", error);
       toast({
         title: "CSV Parsing Error",
         description: error instanceof Error ? error.message : "Failed to parse CSV file",
         variant: "destructive",
       });
+      // Reset the file state on error
+      setFile(null);
     }
   };
 

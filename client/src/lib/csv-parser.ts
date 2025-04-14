@@ -27,7 +27,8 @@ export async function parseCSV(file: File): Promise<{ data: CSVRow[] }> {
           return;
         }
 
-        const lines = (text as string).split('\n');
+        // Handle different line break types (CRLF, LF)
+        const lines = (text as string).replace(/\r\n/g, '\n').split('\n');
 
         // Check if file is empty
         if (lines.length === 0) {
@@ -60,13 +61,42 @@ export async function parseCSV(file: File): Promise<{ data: CSVRow[] }> {
           // Skip empty lines
           if (!line) continue;
 
-          const values = line.split(',');
+          // Handle potential quoted CSV values with commas inside
+          const values: string[] = [];
+          let inQuotes = false;
+          let currentValue = '';
+          
+          for (let j = 0; j < line.length; j++) {
+            const char = line[j];
+            
+            if (char === '"' && (j === 0 || line[j-1] !== '\\')) {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              values.push(currentValue.trim());
+              currentValue = '';
+            } else {
+              currentValue += char;
+            }
+          }
+          
+          // Push the last value
+          values.push(currentValue.trim());
+          
+          // If we didn't get enough values, try simple split
+          if (values.length <= 1) {
+            const simpleSplit = line.split(',');
+            if (simpleSplit.length > values.length) {
+              values.length = 0;
+              simpleSplit.forEach(val => values.push(val.trim()));
+            }
+          }
+
           const errors: string[] = [];
 
           // Get values from correct columns
-          const primaryKeyword = values[keywordIndex]?.trim() || '';
-          const scheduledDate = values[dateIndex]?.trim() || '';
-          const scheduledTime = values[timeIndex]?.trim() || '';
+          const primaryKeyword = values[keywordIndex]?.replace(/^"|"$/g, '').trim() || '';
+          const scheduledDate = values[dateIndex]?.replace(/^"|"$/g, '').trim() || '';
+          const scheduledTime = values[timeIndex]?.replace(/^"|"$/g, '').trim() || '';
 
           // Validate data
           if (!primaryKeyword) {
@@ -96,6 +126,7 @@ export async function parseCSV(file: File): Promise<{ data: CSVRow[] }> {
 
         resolve({ data });
       } catch (error) {
+        console.error("CSV parsing error:", error);
         reject(error instanceof Error ? error : new Error("Failed to parse CSV"));
       }
     };

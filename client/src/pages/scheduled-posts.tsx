@@ -58,6 +58,8 @@ export default function ScheduledPosts() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: [`/api/keywords?page=${page}&search=${search}&status=${status}`],
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: true,
   });
 
   const generateContent = useMutation({

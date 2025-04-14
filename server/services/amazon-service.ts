@@ -70,29 +70,33 @@ export class AmazonService {
       const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
       const dateStamp = amzDate.slice(0, 8);
       
-      // Create the request payload matching the verified curl example format
+      // Create the request payload matching the verified Scratchpad example format
       const payload = JSON.stringify({
         "Keywords": keyword,
         "Resources": [
+          "Images.Primary.Small",
+          "Images.Primary.Medium",
           "Images.Primary.Large",
-          "ItemInfo.Title",
           "ItemInfo.ByLineInfo",
-          "Offers.Listings.Price"
+          "ItemInfo.Features",
+          "ItemInfo.Title",
+          "Offers.Listings.Price",
+          "Offers.Summaries.LowestPrice"
         ],
         "PartnerTag": settings.partnerId,
         "PartnerType": "Associates",
         "Marketplace": "www.amazon.com",
-        "SearchIndex": "All",
         "ItemCount": count,
-        "Condition": "New"
+        "Condition": "New",
+        "SearchIndex": "All"
       });
       
-      // Create the request headers based on verified curl example
+      // Create the request headers based exactly on PHP example
       const algorithm = 'AWS4-HMAC-SHA256';
       const headers: Record<string, string> = {
         'host': host,
-        'content-type': 'application/json; charset=UTF-8', // Use UTF-8 as in curl example
-        'content-encoding': 'amz-1.0', // Required header from curl example
+        'content-type': 'application/json; charset=utf-8', // Exact match from PHP example
+        'content-encoding': 'amz-1.0', // Required header from examples
         'x-amz-target': 'com.amazon.paapi5.v1.ProductAdvertisingAPIv1.SearchItems',
         'x-amz-date': amzDate
       };

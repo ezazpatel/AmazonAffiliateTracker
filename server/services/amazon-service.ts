@@ -261,49 +261,13 @@ export class AmazonService {
       // Log the error for troubleshooting
       if (error instanceof Error) {
         console.error(`Amazon API Error: ${error.message}`);
-        
-        // If we're in development mode, provide a detailed error message for API troubleshooting
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Amazon API may require proper credentials. Please verify your Partner ID, API Key, and Secret Key.');
-          console.log('Using fallback for development testing...');
-          
-          // In development, return mock products to allow further testing
-          return this.getFallbackProducts(keyword, count);
-        }
-        
+        console.log('Amazon API requires valid credentials. Please verify your Partner ID, API Key, and Secret Key.');
+                
         throw new Error(`Failed to search Amazon products: ${error.message}`);
       } else {
         throw new Error(`Failed to search Amazon products: Unknown error`);
       }
     }
-  }
-  
-  /**
-   * Get fallback products for development testing when Amazon API fails
-   * THIS IS ONLY FOR DEVELOPMENT PURPOSES and will be removed in production
-   */
-  private getFallbackProducts(keyword: string, count: number): AmazonProduct[] {
-    console.log(`Using fallback products for keyword: ${keyword}`);
-    const products: AmazonProduct[] = [];
-    
-    for (let i = 0; i < count; i++) {
-      const suffix = this.getProductSuffix(i);
-      const asin = `B${this.generateImageId().substring(0, 9)}`;
-      const title = `${this.capitalizeFirstLetter(keyword)} ${suffix}`;
-      const description = `This ${keyword.toLowerCase()} ${this.getProductDescription(i)}`;
-      const imageUrl = `https://m.media-amazon.com/images/I/${this.generateImageId()}.jpg`;
-      const affiliateLink = `https://www.amazon.com/dp/${asin}?tag=demo-20`;
-      
-      products.push({
-        asin,
-        title,
-        description,
-        imageUrl,
-        affiliateLink
-      });
-    }
-    
-    return products;
   }
   
   /**

@@ -25,20 +25,6 @@ export class AmazonService {
         secretKey: envSecretKey,
       };
     }
-    
-    // Fallback to database settings if environment variables are not available
-    const settings = await storage.getApiSettings();
-    
-    if (!settings || !settings.amazonPartnerId || !settings.amazonApiKey || !settings.amazonSecretKey) {
-      throw new Error("Amazon API settings not configured");
-    }
-    
-    return {
-      partnerId: settings.amazonPartnerId,
-      apiKey: settings.amazonApiKey,
-      secretKey: settings.amazonSecretKey,
-    };
-  }
   
   /**
    * Generate a signature for Amazon API requests
@@ -61,7 +47,7 @@ export class AmazonService {
       // API endpoint details based on verified curl example
       const host = 'webservices.amazon.com';
       const region = 'us-east-1';
-      const uri = '/paapi5/searchitems'; // Use lowercase as shown in working curl example
+      const uri = '/paapi5/Searchitems'; // Use lowercase as shown in working curl example
       const service = 'ProductAdvertisingAPI';
       
       console.log(`Using Amazon credentials - Partner ID: ${settings.partnerId}, API Key: [masked]`);

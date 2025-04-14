@@ -58,10 +58,10 @@ export class AmazonService {
       const settings = await this.getApiSettings();
       console.log(`Searching Amazon for keyword: ${keyword}`);
       
-      // API endpoint details based on Amazon Product Advertising API documentation
+      // API endpoint details based on verified curl example
       const host = 'webservices.amazon.com';
       const region = 'us-east-1';
-      const uri = '/paapi5/SearchItems'; // Try with capital letters as Amazon APIs are often case-sensitive
+      const uri = '/paapi5/searchitems'; // Use lowercase as shown in working curl example
       const service = 'ProductAdvertisingAPI';
       
       console.log(`Using Amazon credentials - Partner ID: ${settings.partnerId}, API Key: [masked]`);
@@ -70,34 +70,29 @@ export class AmazonService {
       const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
       const dateStamp = amzDate.slice(0, 8);
       
-      // Create the request payload according to the official SearchItems documentation
+      // Create the request payload matching the verified curl example format
       const payload = JSON.stringify({
         "Keywords": keyword,
         "Resources": [
           "Images.Primary.Large",
-          "ItemInfo.ByLineInfo",
           "ItemInfo.Title",
-          "ItemInfo.Features",
-          "ItemInfo.ContentInfo",
-          "ItemInfo.ProductInfo",
-          "Offers.Listings.Price",
-          "Offers.Summaries"
+          "ItemInfo.ByLineInfo",
+          "Offers.Listings.Price"
         ],
         "PartnerTag": settings.partnerId,
         "PartnerType": "Associates",
         "Marketplace": "www.amazon.com",
-        "Operation": "SearchItems",
+        "SearchIndex": "All",
         "ItemCount": count,
-        "MinReviewsRating": 4,
-        "Condition": "New",
-        "SearchIndex": "All"
+        "Condition": "New"
       });
       
-      // Create the request headers
+      // Create the request headers based on verified curl example
       const algorithm = 'AWS4-HMAC-SHA256';
       const headers: Record<string, string> = {
         'host': host,
-        'content-type': 'application/json; charset=utf-8',
+        'content-type': 'application/json; charset=UTF-8', // Use UTF-8 as in curl example
+        'content-encoding': 'amz-1.0', // Required header from curl example
         'x-amz-target': 'com.amazon.paapi5.v1.ProductAdvertisingAPIv1.SearchItems',
         'x-amz-date': amzDate
       };
@@ -196,10 +191,10 @@ export class AmazonService {
           const asin = item.ASIN;
           const title = item.ItemInfo.Title.DisplayValue;
           
-          // Extract description from Features or use a default
+          // Extract description from ByLineInfo or use a default
           let description = "Quality product from Amazon.";
-          if (item.ItemInfo.Features && item.ItemInfo.Features.DisplayValues) {
-            description = item.ItemInfo.Features.DisplayValues.slice(0, 3).join(' ');
+          if (item.ItemInfo.ByLineInfo && item.ItemInfo.ByLineInfo.Brand) {
+            description = `${item.ItemInfo.ByLineInfo.Brand.DisplayValue} product with excellent quality and value.`;
           }
           
           // Get image URL

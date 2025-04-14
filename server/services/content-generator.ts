@@ -15,14 +15,9 @@ export class ContentGenerator {
     try {
       console.log(`Starting content generation for: ${keyword.primaryKeyword}`);
       
-      // Step 1: Get Amazon API settings
-      const settings = await storage.getApiSettings();
-      if (!settings || !settings.amazonPartnerId || !settings.amazonApiKey || 
-          !settings.amazonSecretKey) {
-        throw new Error("Amazon API settings not configured");
-      }
-      
-      // Anthropic API key is now accessed from environment variables in the anthropic-service
+      // Both Amazon API and Anthropic API settings are now first checked from environment variables
+      // in their respective services, so we don't need to manually check here.
+      // The amazonService and anthropicService will handle the API key validation.
       
       // Step 2: Search Amazon for relevant products
       const products = await amazonService.searchProducts(keyword.primaryKeyword, 5);

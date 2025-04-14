@@ -12,10 +12,25 @@ interface AmazonProduct {
 
 export class AmazonService {
   private async getApiSettings() {
+    // First try to get the settings from environment variables
+    const envPartnerId = process.env.AMAZON_PARTNER_ID;
+    const envApiKey = process.env.AMAZON_API_KEY;
+    const envSecretKey = process.env.AMAZON_SECRET_KEY;
+    
+    // If all environment variables are present, use them
+    if (envPartnerId && envApiKey && envSecretKey) {
+      return {
+        partnerId: envPartnerId,
+        apiKey: envApiKey,
+        secretKey: envSecretKey,
+      };
+    }
+    
+    // Fallback to database settings if environment variables are not available
     const settings = await storage.getApiSettings();
     
     if (!settings || !settings.amazonPartnerId || !settings.amazonApiKey || !settings.amazonSecretKey) {
-      throw new Error("Amazon Partner API settings not configured");
+      throw new Error("Amazon API settings not configured");
     }
     
     return {

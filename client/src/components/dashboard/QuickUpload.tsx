@@ -34,7 +34,7 @@ export default function QuickUpload() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== "text/csv") {
+    if (!file.name.toLowerCase().endsWith('.csv')) {
       toast({
         title: "Invalid File Type",
         description: "Please upload a CSV file",
@@ -45,21 +45,26 @@ export default function QuickUpload() {
 
     const formData = new FormData();
     formData.append('file', file);
-    upload.mutate(formData);
-
-    // Reset the input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    
+    try {
+      await upload.mutateAsync(formData);
+      
+      // Only reset on success
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      // Error handling is done in mutation callbacks
     }
   };
 
   return (
-    <Card>
+    <Card className="mb-8">
       <CardHeader>
-        <CardTitle>Quick Upload</CardTitle>
+        <CardTitle className="text-lg font-semibold text-neutral-800">Quick Upload</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center justify-between p-4 rounded-lg border-2 border-dashed">
+        <div className="flex items-center justify-center p-6 rounded-lg border-2 border-dashed border-neutral-200">
           <input
             ref={fileInputRef}
             type="file"
@@ -69,7 +74,7 @@ export default function QuickUpload() {
           />
           <Button 
             onClick={() => fileInputRef.current?.click()}
-            className="w-full bg-primary hover:bg-primary-dark"
+            className="bg-primary hover:bg-primary-dark px-6"
             disabled={upload.isPending}
           >
             <Upload className="h-4 w-4 mr-2" />

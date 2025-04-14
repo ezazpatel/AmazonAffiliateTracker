@@ -58,11 +58,10 @@ export class AmazonService {
       const settings = await this.getApiSettings();
       console.log(`Searching Amazon for keyword: ${keyword}`);
       
-      // API endpoint details - try alternative endpoints
-      // According to Amazon docs, it could be webservices.amazon.com or webservices.amazon.<locale>
+      // API endpoint details based on Amazon Product Advertising API documentation
       const host = 'webservices.amazon.com';
       const region = 'us-east-1';
-      const uri = '/paapi5/SearchItems'; // Try capitalizing the endpoint since it's case-sensitive
+      const uri = '/paapi5/searchitems'; // According to official docs, endpoint should be lowercase
       const service = 'ProductAdvertisingAPI';
       
       console.log(`Using Amazon credentials - Partner ID: ${settings.partnerId}, API Key: [masked]`);
@@ -71,14 +70,14 @@ export class AmazonService {
       const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
       const dateStamp = amzDate.slice(0, 8);
       
-      // Create the request payload according to Amazon's examples
+      // Create the request payload according to the official SearchItems documentation
       const payload = JSON.stringify({
         "Keywords": keyword,
         "Resources": [
           "Images.Primary.Large",
+          "ItemInfo.ByLineInfo",
           "ItemInfo.Title",
           "ItemInfo.Features",
-          "ItemInfo.ByLineInfo",
           "ItemInfo.ContentInfo",
           "ItemInfo.ProductInfo",
           "Offers.Listings.Price",
@@ -90,6 +89,7 @@ export class AmazonService {
         "Operation": "SearchItems",
         "ItemCount": count,
         "MinReviewsRating": 4,
+        "Condition": "New",
         "SearchIndex": "All"
       });
       

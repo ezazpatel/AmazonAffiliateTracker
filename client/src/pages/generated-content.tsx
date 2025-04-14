@@ -56,8 +56,14 @@ export default function GeneratedContent() {
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<{
+    articles: Article[];
+    totalPages: number;
+    currentPage: number;
+  }>({
     queryKey: [`/api/articles?page=${page}&search=${search}&status=${status}`],
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: true,
   });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -155,7 +161,7 @@ export default function GeneratedContent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data.articles.map((article: Article) => (
+                    {data?.articles?.map((article: Article) => (
                       <TableRow key={article.id}>
                         <TableCell className="font-medium">{article.title}</TableCell>
                         <TableCell className="hidden md:table-cell">
@@ -216,7 +222,7 @@ export default function GeneratedContent() {
                       />
                     </PaginationItem>
                     
-                    {[...Array(data.totalPages)].map((_, i) => (
+                    {[...Array(data?.totalPages || 1)].map((_, i) => (
                       <PaginationItem key={i}>
                         <PaginationLink 
                           href="#" 
@@ -236,9 +242,9 @@ export default function GeneratedContent() {
                         href="#" 
                         onClick={(e) => {
                           e.preventDefault();
-                          if (page < data.totalPages) setPage(page + 1);
+                          if (page < (data?.totalPages || 1)) setPage(page + 1);
                         }}
-                        className={page >= data.totalPages ? "pointer-events-none opacity-50" : ""}
+                        className={page >= (data?.totalPages || 1) ? "pointer-events-none opacity-50" : ""}
                       />
                     </PaginationItem>
                   </PaginationContent>

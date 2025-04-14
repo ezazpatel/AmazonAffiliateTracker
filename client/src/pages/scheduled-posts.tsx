@@ -56,7 +56,11 @@ export default function ScheduledPosts() {
   const [status, setStatus] = useState("all");
   const { toast } = useToast();
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<{
+    keywords: Keyword[];
+    totalPages: number;
+    currentPage: number;
+  }>({
     queryKey: [`/api/keywords?page=${page}&search=${search}&status=${status}`],
     staleTime: 30000, // 30 seconds
     refetchOnWindowFocus: true,
@@ -205,7 +209,7 @@ export default function ScheduledPosts() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data.keywords.map((keyword: Keyword) => (
+                    {data?.keywords?.map((keyword: Keyword) => (
                       <TableRow key={keyword.id}>
                         <TableCell className="font-medium">
                           {keyword.primaryKeyword}
@@ -270,7 +274,7 @@ export default function ScheduledPosts() {
                       />
                     </PaginationItem>
                     
-                    {[...Array(data.totalPages)].map((_, i) => (
+                    {[...Array(data?.totalPages || 1)].map((_, i) => (
                       <PaginationItem key={i}>
                         <PaginationLink 
                           href="#" 
@@ -290,9 +294,9 @@ export default function ScheduledPosts() {
                         href="#" 
                         onClick={(e) => {
                           e.preventDefault();
-                          if (page < data.totalPages) setPage(page + 1);
+                          if (page < (data?.totalPages || 1)) setPage(page + 1);
                         }}
-                        className={page >= data.totalPages ? "pointer-events-none opacity-50" : ""}
+                        className={page >= (data?.totalPages || 1) ? "pointer-events-none opacity-50" : ""}
                       />
                     </PaginationItem>
                   </PaginationContent>

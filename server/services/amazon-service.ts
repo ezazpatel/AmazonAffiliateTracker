@@ -52,14 +52,13 @@ export class AmazonService {
 
   /**
    * Search for products on Amazon using the Partner API
-   * Finds products that meet quality criteria (100+ ratings, 4.3+ stars)
    */
   async searchProducts(keyword: string, count: number = 5): Promise<AmazonProduct[]> {
     try {
       const settings = await this.getApiSettings();
       console.log(`Searching Amazon for keyword: ${keyword}`);
       
-      // Make actual API call to Amazon using v5 of the API
+      // API endpoint details
       const host = 'webservices.amazon.com';
       const region = 'us-east-1';
       const uri = '/paapi5/searchitems';
@@ -67,11 +66,11 @@ export class AmazonService {
       
       console.log(`Using Amazon credentials - Partner ID: ${settings.partnerId}, API Key: [masked]`);
       
-      // Get the current time in ISO format
+      // Get the current time in ISO format for request signing
       const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
       const dateStamp = amzDate.slice(0, 8);
       
-      // Create the canonical request payload according to Amazon's examples
+      // Create the request payload according to Amazon's examples
       const payload = JSON.stringify({
         "Keywords": keyword,
         "Resources": [
@@ -89,11 +88,11 @@ export class AmazonService {
         "Marketplace": "www.amazon.com",
         "Operation": "SearchItems",
         "ItemCount": count,
-        "MinReviewsRating": 4,  // Added to ensure good quality products
+        "MinReviewsRating": 4,
         "SearchIndex": "All"
       });
       
-      // Create the canonical request headers
+      // Create the request headers
       const algorithm = 'AWS4-HMAC-SHA256';
       const headers: Record<string, string> = {
         'host': host,
@@ -102,7 +101,7 @@ export class AmazonService {
         'x-amz-date': amzDate
       };
       
-      // Create the canonical headers string
+      // Create the canonical headers string for signing
       const canonicalHeaders = Object.keys(headers)
         .sort()
         .map(key => `${key}:${headers[key]}`)
@@ -144,8 +143,16 @@ export class AmazonService {
       const url = `https://${host}${uri}`;
       console.log(`Making Amazon API request to: ${url}`);
       
-      console.log(`Request payload: ${payload.substring(0, 500)}...`);
+      // Log the complete request details for debugging
+      console.log(`Request headers:`, JSON.stringify({
+        ...headers,
+        'Authorization': authorizationHeader.substring(0, 60) + '...',
+        'Content-Length': Buffer.byteLength(payload).toString()
+      }, null, 2));
       
+      console.log(`Request payload: ${payload}`);
+      
+      // Make the API request
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -155,7 +162,8 @@ export class AmazonService {
         },
         body: payload
       });
-      
+    
+      // Handle API response
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Amazon API error response:", errorText);
@@ -163,20 +171,21 @@ export class AmazonService {
       }
       
       const data = await response.json();
+      console.log("Amazon API raw response:", JSON.stringify(data).substring(0, 500) + "...");
       
       // Process the response to extract product information
       const products: AmazonProduct[] = [];
       
       if (data.SearchResult && data.SearchResult.Items) {
-        // Since we're using MinReviewsRating in the API call, we don't need to filter further
-        const qualifiedProducts = data.SearchResult.Items;
+        const items = data.SearchResult.Items;
+        console.log(`Found ${items.length} items in search results`);
         
-        for (const item of qualifiedProducts.slice(0, count)) {
+        for (const item of items.slice(0, count)) {
           const asin = item.ASIN;
           const title = item.ItemInfo.Title.DisplayValue;
           
           // Extract description from Features or use a default
-          let description = "High quality product with excellent reviews.";
+          let description = "Quality product from Amazon.";
           if (item.ItemInfo.Features && item.ItemInfo.Features.DisplayValues) {
             description = item.ItemInfo.Features.DisplayValues.slice(0, 3).join(' ');
           }
@@ -197,48 +206,7 @@ export class AmazonService {
         }
       }
       
-      // If we don't have enough qualified products, log info and use fallback
-      if (products.length < count) {
-        console.log(`Only found ${products.length} qualified products for keyword "${keyword}". Adding alternatives to reach ${count}.`);
-        
-        // Add additional products without filtering for ratings if needed
-        if (data.SearchResult && data.SearchResult.Items) {
-          const remainingItems = data.SearchResult.Items.filter((item: any) => {
-            // Filter out items already added
-            const existingAsin = products.find(p => p.asin === item.ASIN);
-            return !existingAsin;
-          });
-          
-          // Add remaining items until we reach the count
-          for (let i = 0; i < remainingItems.length && products.length < count; i++) {
-            const item = remainingItems[i];
-            const asin = item.ASIN;
-            const title = item.ItemInfo.Title.DisplayValue;
-            
-            // Extract description from Features or use a default
-            let description = "Quality product from Amazon.";
-            if (item.ItemInfo.Features && item.ItemInfo.Features.DisplayValues) {
-              description = item.ItemInfo.Features.DisplayValues.slice(0, 3).join(' ');
-            }
-            
-            // Get image URL
-            const imageUrl = item.Images.Primary.Large.URL;
-            
-            // Create affiliate link
-            const affiliateLink = `https://www.amazon.com/dp/${asin}?tag=${settings.partnerId}`;
-            
-            products.push({
-              asin,
-              title,
-              description,
-              imageUrl,
-              affiliateLink
-            });
-          }
-        }
-      }
-      
-      // If we're still below count, log warning
+      // Check if we found enough products
       if (products.length === 0) {
         throw new Error(`No products found for keyword "${keyword}"`);
       } else if (products.length < count) {
@@ -246,14 +214,14 @@ export class AmazonService {
       }
       
       return products;
+      
     } catch (error) {
       console.error("Amazon product search failed:", error);
       
-      // Log the error for troubleshooting
+      // Provide helpful error message
       if (error instanceof Error) {
         console.error(`Amazon API Error: ${error.message}`);
         console.log('Amazon API requires valid credentials. Please verify your Partner ID, API Key, and Secret Key.');
-                
         throw new Error(`Failed to search Amazon products: ${error.message}`);
       } else {
         throw new Error(`Failed to search Amazon products: Unknown error`);

@@ -60,14 +60,55 @@ export class AmazonService {
       const payload = JSON.stringify({
         "Keywords": keyword,
         "Resources": [
+          "BrowseNodeInfo.BrowseNodes",
+          "BrowseNodeInfo.BrowseNodes.Ancestor",
+          "BrowseNodeInfo.BrowseNodes.SalesRank",
+          "BrowseNodeInfo.WebsiteSalesRank",
+          "CustomerReviews.Count",
+          "CustomerReviews.StarRating",
           "Images.Primary.Small",
           "Images.Primary.Medium",
           "Images.Primary.Large",
+          "Images.Primary.HighRes",
+          "Images.Variants.Small",
+          "Images.Variants.Medium",
+          "Images.Variants.Large",
+          "Images.Variants.HighRes",
           "ItemInfo.ByLineInfo",
+          "ItemInfo.ContentInfo",
+          "ItemInfo.ContentRating",
+          "ItemInfo.Classifications",
+          "ItemInfo.ExternalIds",
           "ItemInfo.Features",
+          "ItemInfo.ManufactureInfo",
+          "ItemInfo.ProductInfo",
+          "ItemInfo.TechnicalInfo",
           "ItemInfo.Title",
+          "ItemInfo.TradeInInfo",
+          "Offers.Listings.Availability.MaxOrderQuantity",
+          "Offers.Listings.Availability.Message",
+          "Offers.Listings.Availability.MinOrderQuantity",
+          "Offers.Listings.Availability.Type",
+          "Offers.Listings.Condition",
+          "Offers.Listings.Condition.ConditionNote",
+          "Offers.Listings.Condition.SubCondition",
+          "Offers.Listings.DeliveryInfo.IsAmazonFulfilled",
+          "Offers.Listings.DeliveryInfo.IsFreeShippingEligible",
+          "Offers.Listings.DeliveryInfo.IsPrimeEligible",
+          "Offers.Listings.DeliveryInfo.ShippingCharges",
+          "Offers.Listings.IsBuyBoxWinner",
+          "Offers.Listings.LoyaltyPoints.Points",
+          "Offers.Listings.MerchantInfo",
           "Offers.Listings.Price",
-          "Offers.Summaries.LowestPrice"
+          "Offers.Listings.ProgramEligibility.IsPrimeExclusive",
+          "Offers.Listings.ProgramEligibility.IsPrimePantry",
+          "Offers.Listings.Promotions",
+          "Offers.Listings.SavingBasis",
+          "Offers.Summaries.HighestPrice",
+          "Offers.Summaries.LowestPrice",
+          "Offers.Summaries.OfferCount",
+          "ParentASIN",
+          "SearchRefinements"
         ],
         "PartnerTag": settings.partnerId,
         "PartnerType": "Associates",
@@ -155,15 +196,14 @@ export class AmazonService {
         console.error("Amazon API error response:", errorText);
         console.error(`Response status: ${response.status}`);
         
-        // Provide more specific error messages based on status code
-        if (response.status === 401 || response.status === 403) {
-          throw new Error(`Amazon API authentication failed. Please verify your API credentials. Status: ${response.status}, Details: ${errorText}`);
-        } else if (response.status === 404) {
-          throw new Error(`Amazon API endpoint not found. Check if the API endpoint URL is correct. Status: ${response.status}, Details: ${errorText}`);
-        } else if (response.status >= 500) {
-          throw new Error(`Amazon API server error. This might be a temporary issue with Amazon's servers. Status: ${response.status}, Details: ${errorText}`);
-        } else {
-          throw new Error(`Amazon API responded with status ${response.status}: ${errorText}`);
+        try {
+          const json = JSON.parse(errorText);
+          if (json.Errors) {
+            const errors = json.Errors.map((e: any) => `Error Code: ${e.Code}, Message: ${e.Message}`).join('; ');
+            throw new Error(errors);
+          }
+        } catch (e) {
+          throw new Error("Error Code: InternalFailure, Message: The request processing has failed because of an unknown error, exception or failure. Please retry again.");
         }
       }
       

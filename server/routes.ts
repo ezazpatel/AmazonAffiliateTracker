@@ -75,14 +75,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/keywords/upload", upload.single("file"), async (req, res) => {
+  app.post("/api/keywords/upload", upload.single("file"), async (req: any, res) => {
     try {
       if (!req.file) {
+        console.error("No file found in request:", req.body, req.files);
         return res.status(400).json({ message: "No file uploaded" });
       }
 
       console.log("File upload received:", req.file.originalname, req.file.mimetype, req.file.size);
-      console.log("Request body:", req.body);
+      console.log("Request body fields:", Object.keys(req.body));
 
       // Check if selectedRows is provided
       const selectedRowsJSON = req.body.selectedRows;

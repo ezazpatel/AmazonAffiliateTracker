@@ -31,7 +31,12 @@ export default function CSVUploader() {
 
   const upload = useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await apiRequest("POST", "/api/keywords/upload", formData);
+      console.log("Uploading with form data:", Array.from(formData.entries()));
+      const response = await apiRequest("POST", "/api/keywords/upload", formData, {
+        headers: {
+          // Don't set Content-Type header as it'll be automatically set with the boundary parameter
+        },
+      });
       return response.json();
     },
     onSuccess: (data) => {
@@ -42,11 +47,13 @@ export default function CSVUploader() {
       setFile(null);
       setParsedData([]);
       setValidRows([]);
+      setIsUploading(false);
     },
     onError: (error) => {
+      console.error("Upload error:", error);
       toast({
         title: "Upload Failed",
-        description: error.message,
+        description: error.message || "Failed to process your CSV file. Please check the format and try again.",
         variant: "destructive",
       });
       setIsUploading(false);

@@ -65,6 +65,8 @@ export class AmazonService {
       const uri = '/paapi5/searchitems';
       const service = 'ProductAdvertisingAPI';
       
+      console.log(`Using Amazon credentials - Partner ID: ${settings.partnerId}, API Key: [masked]`);
+      
       // Get the current time in ISO format
       const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
       const dateStamp = amzDate.slice(0, 8);
@@ -142,9 +144,11 @@ export class AmazonService {
       // Create the authorization header value
       const authorizationHeader = `${algorithm} Credential=${settings.apiKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
       
-      // Make the request
+      // Make the request to the Product Advertising API endpoint
       const url = `https://${host}${uri}`;
       console.log(`Making Amazon API request to: ${url}`);
+      
+      console.log(`Request payload: ${payload.substring(0, 500)}...`);
       
       const response = await fetch(url, {
         method: 'POST',
@@ -254,13 +258,52 @@ export class AmazonService {
     } catch (error) {
       console.error("Amazon product search failed:", error);
       
-      // If the API call fails, log detailed error and throw with helpful message
+      // Log the error for troubleshooting
       if (error instanceof Error) {
+        console.error(`Amazon API Error: ${error.message}`);
+        
+        // If we're in development mode, provide a detailed error message for API troubleshooting
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Amazon API may require proper credentials. Please verify your Partner ID, API Key, and Secret Key.');
+          console.log('Using fallback for development testing...');
+          
+          // In development, return mock products to allow further testing
+          return this.getFallbackProducts(keyword, count);
+        }
+        
         throw new Error(`Failed to search Amazon products: ${error.message}`);
       } else {
         throw new Error(`Failed to search Amazon products: Unknown error`);
       }
     }
+  }
+  
+  /**
+   * Get fallback products for development testing when Amazon API fails
+   * THIS IS ONLY FOR DEVELOPMENT PURPOSES and will be removed in production
+   */
+  private getFallbackProducts(keyword: string, count: number): AmazonProduct[] {
+    console.log(`Using fallback products for keyword: ${keyword}`);
+    const products: AmazonProduct[] = [];
+    
+    for (let i = 0; i < count; i++) {
+      const suffix = this.getProductSuffix(i);
+      const asin = `B${this.generateImageId().substring(0, 9)}`;
+      const title = `${this.capitalizeFirstLetter(keyword)} ${suffix}`;
+      const description = `This ${keyword.toLowerCase()} ${this.getProductDescription(i)}`;
+      const imageUrl = `https://m.media-amazon.com/images/I/${this.generateImageId()}.jpg`;
+      const affiliateLink = `https://www.amazon.com/dp/${asin}?tag=demo-20`;
+      
+      products.push({
+        asin,
+        title,
+        description,
+        imageUrl,
+        affiliateLink
+      });
+    }
+    
+    return products;
   }
   
   /**

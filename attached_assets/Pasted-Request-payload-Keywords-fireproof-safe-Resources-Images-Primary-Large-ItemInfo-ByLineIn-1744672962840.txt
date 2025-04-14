@@ -1,0 +1,15 @@
+Request payload: {"Keywords":"fireproof safe","Resources":["Images.Primary.Large","ItemInfo.ByLineInfo","ItemInfo.Title","ItemInfo.Features","ItemInfo.ContentInfo","ItemInfo.ProductInfo","Offers.Listings.Price","Offers.Summaries"],"PartnerTag":"haelus01-20","PartnerType":"Associates","Marketplace":"www.amazon.com","Operation":"SearchItems","ItemCount":5,"MinReviewsRating":4,"Condition":"New","SearchIndex":"All"}
+11:21:41 PM [express] POST /api/keywords/6/generate 200 in 171ms :: {"success":true,"message":"Conten…
+Amazon API error response: {"Output":{"__type":"com.amazon.coral.service#InternalFailure"},"Version":"1.0"}
+Response status: 404
+Amazon product search failed: Error: Amazon API endpoint not found. Check if the API endpoint URL is correct. Status: 404, Details: {"Output":{"__type":"com.amazon.coral.service#InternalFailure"},"Version":"1.0"}
+    at AmazonService.searchProducts (/home/runner/workspace/server/services/amazon-service.ts:177:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ContentGenerator.generateContent (/home/runner/workspace/server/services/content-generator.ts:23:24)
+Amazon API Error: Amazon API endpoint not found. Check if the API endpoint URL is correct. Status: 404, Details: {"Output":{"__type":"com.amazon.coral.service#InternalFailure"},"Version":"1.0"}
+Amazon API requires valid credentials. Please verify your Partner ID, API Key, and Secret Key.
+Content generation failed for fireproof safe: Error: Failed to search Amazon products: Amazon API endpoint not found. Check if the API endpoint URL is correct. Status: 404, Details: {"Output":{"__type":"com.amazon.coral.service#InternalFailure"},"Version":"1.0"}
+    at AmazonService.searchProducts (/home/runner/workspace/server/services/amazon-service.ts:237:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async ContentGenerator.generateContent (/home/runner/workspace/server/services/content-generator.ts:23:24)
+11:21:50 PM [express] GET /api/keywords 200 in 149ms :: {"keywords":[{"id":6,"primaryKeyword":"firepr…

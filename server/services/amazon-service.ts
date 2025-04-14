@@ -61,7 +61,7 @@ export class AmazonService {
       // API endpoint details based on Amazon Product Advertising API documentation
       const host = 'webservices.amazon.com';
       const region = 'us-east-1';
-      const uri = '/paapi5/searchitems'; // According to official docs, endpoint should be lowercase
+      const uri = '/paapi5/SearchItems'; // Try with capital letters as Amazon APIs are often case-sensitive
       const service = 'ProductAdvertisingAPI';
       
       console.log(`Using Amazon credentials - Partner ID: ${settings.partnerId}, API Key: [masked]`);

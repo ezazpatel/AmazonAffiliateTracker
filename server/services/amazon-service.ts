@@ -69,15 +69,20 @@ export class AmazonService {
       const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
       const dateStamp = amzDate.slice(0, 8);
       
-      // Create the canonical request payload
+      // Create the canonical request payload according to Amazon's docs
       const payload = JSON.stringify({
         "Keywords": keyword,
         "Resources": [
           "Images.Primary.Large",
           "ItemInfo.Title",
           "ItemInfo.Features",
+          "ItemInfo.ContentInfo",
           "ItemInfo.ProductInfo",
+          "ItemInfo.TechnicalInfo",
+          "ItemInfo.ExternalIds",
           "Offers.Listings.Price",
+          "Offers.Summaries", 
+          "BrowseNodeInfo.BrowseNodes",
           "CustomerReviews"
         ],
         "PartnerTag": settings.partnerId,
@@ -85,12 +90,14 @@ export class AmazonService {
         "Marketplace": "www.amazon.com",
         "Operation": "SearchItems",
         "ItemCount": count,
-        "SearchIndex": "All"
+        "MinReviewsRating": 4,  // Added to ensure good quality products
+        "SearchIndex": "All",
+        "SortBy": "Relevance"   // Added according to docs to get most relevant results
       });
       
       // Create the canonical request headers
       const algorithm = 'AWS4-HMAC-SHA256';
-      const headers = {
+      const headers: Record<string, string> = {
         'host': host,
         'content-type': 'application/json; charset=utf-8',
         'x-amz-target': 'com.amazon.paapi5.v1.ProductAdvertisingAPIv1.SearchItems',

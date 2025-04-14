@@ -45,17 +45,15 @@ export function Sidebar({ isOpen, setIsOpen, currentPath }: SidebarProps) {
         <ul>
           {navItems.map((item) => (
             <li key={item.path}>
-              <Link href={item.path}>
-                <a 
-                  className={`flex items-center px-4 py-3 text-sm ${
-                    currentPath === item.path 
-                      ? "text-primary bg-blue-50" 
-                      : "text-neutral-600 hover:bg-blue-50 hover:text-primary"
-                  }`}
-                >
-                  {item.icon}
-                  <span className="font-medium">{item.label}</span>
-                </a>
+              <Link href={item.path}
+                className={`flex items-center px-4 py-3 text-sm ${
+                  currentPath === item.path 
+                    ? "text-primary bg-blue-50" 
+                    : "text-neutral-600 hover:bg-blue-50 hover:text-primary"
+                }`}
+              >
+                {item.icon}
+                <span className="font-medium">{item.label}</span>
               </Link>
             </li>
           ))}

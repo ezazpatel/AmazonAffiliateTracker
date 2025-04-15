@@ -85,25 +85,61 @@ export class AnthropicService {
       });
       
       // Create the system prompt for Anthropic
-      const systemPrompt = `You are a professional content writer creating a listicle-style blog post for an Amazon affiliate website.
-      Your task is to create SEO-optimized content about "${keyword}" that incorporates the provided products.
-      
-      Write in a casual, friendly, and informative tone at a 6-7th grade reading level. Be conversational but factual.
-      
-      The content MUST have this exact structure:
-      1. A compelling title with the main keyword
-      2. A snippet (1-2 sentences that appears after the title)
-      3. A list of all affiliate links included in the article in the format "Best for [specific use]: [affiliate link]"
-      4. An introduction section explaining the topic
-      5. Product review sections (one for each product), each with:
-         - H2 heading with product name (wrapped in affiliate link)
-         - Product image (wrapped in same affiliate link)
-         - Clear description using only factual information from Amazon (no made-up information)
-         - A simple specifications table with important features explained in simple terms
-         - Who it's best for with a clear recommendation
-         - At least one text link to the product
-      6. A wrap-up section summarizing key points
-      7. A FAQ section with 3-5 relevant questions and detailed answers
+      const systemPrompt = `You are a professional content writer creating a comprehensive, SEO-optimized blog post about "${keyword}" for an Amazon affiliate website.
+
+Write in a casual, friendly tone at a 6-7th grade reading level while naturally incorporating variations of "${keyword}" throughout the content.
+
+The article will be generated in sections. For each section:
+- Maintain continuity with previous sections
+- Use natural language that flows well
+- Include relevant variations of the main keyword where appropriate
+
+Start with:
+1. Title & Snippet (100 tokens):
+   - Create a compelling H1 title using the main keyword
+   - Write a 2-3 sentence snippet that hooks readers
+
+2. Affiliate Links Section (100 tokens):
+   Create a structured list of product recommendations:
+   <div class="product-links">
+   - Best Overall: [Product link]
+   - Best Budget Option: [Product link]
+   - Best Premium Choice: [Product link]
+   - Most User-Friendly: [Product link]
+   - Best Value: [Product link]
+   </div>
+
+3. Introduction (300 tokens):
+   - Define the problem/need
+   - Explain why "${keyword}" matters
+   - Overview of what readers will learn
+   - Mention key selection criteria
+
+4. Product Reviews (400 tokens each):
+   Each product section must include:
+   - H2 heading with product name (in affiliate link)
+   - Product image (in affiliate link)
+   - Comprehensive analysis of features and benefits
+   - Detailed pros and cons
+   - Real-world use cases
+   - Technical specifications table
+   - Clear value proposition
+   - Multiple contextual affiliate links
+   - Who this product is perfect for
+
+5. Wrap-up (400 tokens):
+   - Summarize key findings
+   - Compare products across important criteria
+   - Make clear recommendations for different user needs
+   - Include a final call to action
+
+6. FAQ Section (800 tokens):
+   Create 5 detailed FAQs that:
+   - Address common concerns about ${keyword}
+   - Compare different features and options
+   - Explain technical aspects in simple terms
+   - Include product-specific questions
+   - Each answer should be 3-4 paragraphs with actionable advice
       
       Follow these SEO best practices:
       - Use the main keyword in the title, first paragraph, and at least one H2
@@ -164,15 +200,42 @@ export class AnthropicService {
       
       // Make the API call to Anthropic
 
-      const response = await anthropic.messages.create({
-        model: "claude-3-5-haiku-latest",
-        max_tokens: options.maxTokens || 4000,
-        temperature: options.temperature || 0.7,
-        system: systemPrompt,
-        messages: [
-          { role: "user", content: userPrompt }
-        ],
-      });
+      // Generate content in sections
+      const sections = ['title_snippet', 'affiliate_links', 'introduction', 'product_reviews', 'wrap_up', 'faq'];
+      let finalContent = '';
+      let currentTitle = '';
+      let currentSnippet = '';
+
+      for (const section of sections) {
+        const tokenLimit = section === 'introduction' ? 300 :
+                         section === 'product_reviews' ? 400 :
+                         section === 'wrap_up' ? 400 :
+                         section === 'faq' ? 800 : 200;
+
+        const response = await anthropic.messages.create({
+          model: "claude-3-5-haiku-latest",
+          max_tokens: tokenLimit,
+          temperature: 0.7,
+          system: systemPrompt,
+          messages: [
+            { 
+              role: "user", 
+              content: `${userPrompt}\n\nNow, generate the ${section} section. Use the following content generated so far:\n${finalContent}`
+            }
+          ],
+        });
+
+        const sectionContent = this.extractTextContent(response);
+        
+        if (section === 'title_snippet') {
+          const titleMatch = sectionContent.match(/=== TITLE ===\s*([\s\S]*?)(?:===|$)/i);
+          const snippetMatch = sectionContent.match(/=== SNIPPET ===\s*([\s\S]*?)(?:===|$)/i);
+          if (titleMatch) currentTitle = titleMatch[1].trim();
+          if (snippetMatch) currentSnippet = snippetMatch[1].trim();
+        } else {
+          finalContent += sectionContent + '\n\n';
+        }
+      }
       
       // Extract the content
       const content = this.extractTextContent(response);

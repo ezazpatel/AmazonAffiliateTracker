@@ -177,12 +177,13 @@ export class AnthropicService {
       // Extract the content
       const content = this.extractTextContent(response);
       
-      // Parse the content to extract title, snippet, and full content
-      const titleMatch = content.match(/=== TITLE ===\s*([\s\S]*?)\s*(?:===|$)/);
-      const snippetMatch = content.match(/=== SNIPPET ===\s*([\s\S]*?)\s*(?:===|$)/);
-      const contentMatch = content.match(/=== CONTENT ===\s*([\s\S]*)/); // Compatible with ES2015+
+      // Parse the content to extract title, snippet, and full content with more flexible regex
+      const titleMatch = content.match(/===\s*TITLE\s*===\s*([\s\S]*?)(?:===\s*|$)/i);
+      const snippetMatch = content.match(/===\s*SNIPPET\s*===\s*([\s\S]*?)(?:===\s*|$)/i);
+      const contentMatch = content.match(/===\s*CONTENT\s*===\s*([\s\S]*)/i);
       
       if (!titleMatch || !snippetMatch || !contentMatch) {
+        console.error("Failed to parse content sections. Raw content:", content);
         throw new Error("Failed to parse generated content structure");
       }
       

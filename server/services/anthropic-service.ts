@@ -237,16 +237,16 @@ Start with:
         }
       }
       
-      // Extract the content
-      const content = this.extractTextContent(response);
+      // Combine title, snippet and content
+      const finalResult = `=== TITLE ===\n${currentTitle}\n\n=== SNIPPET ===\n${currentSnippet}\n\n=== CONTENT ===\n${finalContent}`;
       
-      // Parse the content to extract title, snippet, and full content with more flexible regex
-      const titleMatch = content.match(/===\s*TITLE\s*===\s*([\s\S]*?)(?:===\s*|$)/i);
-      const snippetMatch = content.match(/===\s*SNIPPET\s*===\s*([\s\S]*?)(?:===\s*|$)/i);
-      const contentMatch = content.match(/===\s*CONTENT\s*===\s*([\s\S]*)/i);
+      // Parse the combined content
+      const titleMatch = finalResult.match(/===\s*TITLE\s*===\s*([\s\S]*?)(?:===\s*|$)/i);
+      const snippetMatch = finalResult.match(/===\s*SNIPPET\s*===\s*([\s\S]*?)(?:===\s*|$)/i);
+      const contentMatch = finalResult.match(/===\s*CONTENT\s*===\s*([\s\S]*)/i);
       
       if (!titleMatch || !snippetMatch || !contentMatch) {
-        console.error("Failed to parse content sections. Raw content:", content);
+        console.error("Failed to parse content sections. Raw content:", finalResult);
         throw new Error("Failed to parse generated content structure");
       }
       

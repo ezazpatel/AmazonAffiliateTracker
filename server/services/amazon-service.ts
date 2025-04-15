@@ -25,6 +25,9 @@ export class AmazonService {
         secretKey: envSecretKey,
       };
     }
+    
+    throw new Error("Amazon API settings not found in environment variables");
+  }
   
   /**
    * Generate a signature for Amazon API requests
@@ -44,10 +47,14 @@ export class AmazonService {
       const settings = await this.getApiSettings();
       console.log(`Searching Amazon for keyword: ${keyword}`);
       
+      if (!settings) {
+        throw new Error("Amazon API settings are not available");
+      }
+      
       // API endpoint details based on verified curl example
       const host = 'webservices.amazon.com';
       const region = 'us-east-1';
-      const uri = '/paapi5/Searchitems'; // Use lowercase as shown in working curl example
+      const uri = '/paapi5/searchitems'; // Lowercase based on example
       const service = 'ProductAdvertisingAPI';
       
       console.log(`Using Amazon credentials - Partner ID: ${settings.partnerId}, API Key: [masked]`);
@@ -230,8 +237,9 @@ export class AmazonService {
           // Get image URL
           const imageUrl = item.Images.Primary.Large.URL;
           
-          // Create affiliate link
-          const affiliateLink = `https://www.amazon.com/dp/${asin}?tag=${settings.partnerId}`;
+          // Create proper Amazon affiliate link with required parameters
+          // Format: https://www.amazon.com/dp/{ASIN}?tag={PARTNER_ID}&linkCode=ll1&language=en_US&ref_=as_li_ss_tl
+          const affiliateLink = `https://www.amazon.com/dp/${asin}?tag=${settings.partnerId}&linkCode=ll1&language=en_US&ref_=as_li_ss_tl`;
           
           products.push({
             asin,

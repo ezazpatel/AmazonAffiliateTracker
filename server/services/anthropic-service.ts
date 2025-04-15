@@ -139,9 +139,9 @@ export class AnthropicService {
       userPrompt += `Remember to structure the article as specified in the system prompt, with proper HTML formatting.`;
       
       // Make the API call to Anthropic
-      // the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
+
       const response = await anthropic.messages.create({
-        model: "claude-3-7-sonnet-20250219",
+        model: "claude-3-5-haiku-latest",
         max_tokens: options.maxTokens || 4000,
         temperature: options.temperature || 0.7,
         system: systemPrompt,
@@ -189,9 +189,8 @@ export class AnthropicService {
       Each FAQ should include a question and a comprehensive answer (3-5 sentences).
       Focus on providing valuable information that would help users make purchasing decisions.`;
       
-      // the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
       const response = await anthropic.messages.create({
-        model: "claude-3-7-sonnet-20250219",
+        model: "claude-3-5-haiku-latest",
         max_tokens: 1500,
         temperature: 0.7,
         system: systemPrompt,

@@ -117,8 +117,6 @@ export class AnthropicService {
       
       3. Include at least one text link to each product in its description section using:
          <a href="{affiliateLink}" target="_blank" rel="nofollow">Check price on Amazon</a>
-         
-      4. DO NOT MODIFY the affiliate links in any way - use them exactly as provided, without changing domains or parameters.
       
       The output should have the format:
       === TITLE ===

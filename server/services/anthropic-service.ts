@@ -107,7 +107,16 @@ export class AnthropicService {
       - Ensure content flows naturally and doesn't feel keyword-stuffed
       
       Output the content with proper HTML formatting including <h1>, <h2>, <p>, <ul>, <li> tags.
-      For the product images, use this format: <img src="{imageUrl}" alt="{title}" />
+      
+      IMPORTANT - For product links and images:
+      1. Each product image should be wrapped in a link to its affiliate URL using:
+         <a href="{affiliateLink}" target="_blank" rel="nofollow"><img src="{imageUrl}" alt="{title}" /></a>
+      
+      2. Each product heading (H2) should also be wrapped in the affiliate link:
+         <a href="{affiliateLink}" target="_blank" rel="nofollow"><h2>Product Name</h2></a>
+      
+      3. Include at least one text link to each product in its description section using:
+         <a href="{affiliateLink}" target="_blank" rel="nofollow">Check price on Amazon</a>
       
       The output should have the format:
       === TITLE ===

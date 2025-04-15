@@ -67,6 +67,7 @@ export class AnthropicService {
   
   /**
    * Generate article content using Anthropic API
+   * Creates an SEO-optimized affiliate article with proper product links and formatting
    */
   async generateArticleContent(
     keyword: string,
@@ -87,18 +88,22 @@ export class AnthropicService {
       const systemPrompt = `You are a professional content writer creating a listicle-style blog post for an Amazon affiliate website.
       Your task is to create SEO-optimized content about "${keyword}" that incorporates the provided products.
       
-      The content should have this structure:
+      Write in a casual, friendly, and informative tone at a 6-7th grade reading level. Be conversational but factual.
+      
+      The content MUST have this exact structure:
       1. A compelling title with the main keyword
-      2. A snippet (short description that appears after the title)
-      3. A summary section with affiliate disclosure
-      4. An introduction that explains the topic
-      5. Product sections (one for each product), each with:
-         - H2 heading with product name
-         - Product description
-         - Key features/benefits
-         - Who it's best for
-      6. A FAQ section with 3-5 relevant questions and answers
-      7. A conclusion
+      2. A snippet (1-2 sentences that appears after the title)
+      3. A list of all affiliate links included in the article in the format "Best for [specific use]: [affiliate link]"
+      4. An introduction section explaining the topic
+      5. Product review sections (one for each product), each with:
+         - H2 heading with product name (wrapped in affiliate link)
+         - Product image (wrapped in same affiliate link)
+         - Clear description using only factual information from Amazon (no made-up information)
+         - A simple specifications table with important features explained in simple terms
+         - Who it's best for with a clear recommendation
+         - At least one text link to the product
+      6. A wrap-up section summarizing key points
+      7. A FAQ section with 3-5 relevant questions and detailed answers
       
       Follow these SEO best practices:
       - Use the main keyword in the title, first paragraph, and at least one H2
@@ -106,7 +111,7 @@ export class AnthropicService {
       - Focus on solving reader problems and answering questions
       - Ensure content flows naturally and doesn't feel keyword-stuffed
       
-      Output the content with proper HTML formatting including <h1>, <h2>, <p>, <ul>, <li> tags.
+      Output the content with proper HTML formatting including <h1>, <h2>, <p>, <ul>, <li>, and <table> tags.
       
       IMPORTANT - For product links and images:
       1. Each product image should be wrapped in a link to its affiliate URL using:
@@ -117,6 +122,12 @@ export class AnthropicService {
       
       3. Include at least one text link to each product in its description section using:
          <a href="{affiliateLink}" target="_blank" rel="nofollow">Check price on Amazon</a>
+      
+      4. For the link list section after the snippet, use:
+         <div class="product-links">
+           <p>Best for [specific use]: <a href="{affiliateLink}" target="_blank" rel="nofollow">{product title}</a></p>
+           <!-- Repeat for each product -->
+         </div>
       
       The output should have the format:
       === TITLE ===
@@ -133,7 +144,7 @@ export class AnthropicService {
 
       `;
       
-      // Add product information
+      // Add product information with more detail
       products.forEach((product, index) => {
         userPrompt += `Product ${index + 1}:
         - Title: ${product.title}
@@ -141,6 +152,10 @@ export class AnthropicService {
         - Description: ${product.description}
         - Image URL: ${product.imageUrl}
         - Affiliate Link: ${product.affiliateLink}
+        - Key Features: Get these from the product title and description
+        - Best Uses: Suggest based on product features
+        - Specifications: Include dimensions, weight, materials, etc. when available
+        - Who It's Best For: Identify a specific use case for this product
         
         `;
       });
@@ -194,9 +209,16 @@ export class AnthropicService {
       });
       
       const systemPrompt = `You are an SEO expert generating frequently asked questions related to a specific keyword.
-      Generate ${count} relevant, conversational FAQs that people might actually search for.
-      Each FAQ should include a question and a comprehensive answer (3-5 sentences).
-      Focus on providing valuable information that would help users make purchasing decisions.`;
+      Generate ${count} relevant, conversational FAQs that people actually search for online.
+      
+      Each FAQ should:
+      - Include a question written in natural language as someone would type in Google
+      - Provide a comprehensive answer (3-5 sentences) written at a 6-7th grade reading level
+      - Focus on providing valuable information that helps users make purchasing decisions
+      - Address common concerns, features, benefits, or comparisons related to ${keyword}
+      - Include specific product details when appropriate
+      
+      Write in a helpful, informative tone that builds trust and establishes expertise.`;
       
       const response = await anthropic.messages.create({
         model: "claude-3-5-haiku-latest",

@@ -237,9 +237,10 @@ export class AmazonService {
           // Get image URL
           const imageUrl = item.Images.Primary.Large.URL;
           
-          // Create proper Amazon affiliate link with required parameters
-          // Format: https://www.amazon.com/dp/{ASIN}?tag={PARTNER_ID}&linkCode=ll1&language=en_US&ref_=as_li_ss_tl
-          const affiliateLink = `https://www.amazon.com/dp/${asin}?tag=${settings.partnerId}&linkCode=ll1&language=en_US&ref_=as_li_ss_tl`;
+          // Create proper Amazon.ca affiliate link with required parameters using the exact format you specified
+          // Format: https://www.amazon.ca/dp/{ASIN}?th=1&linkCode=ll1&tag={PARTNER_ID}&linkId=RANDOM_ID&language=en_CA&ref_=as_li_ss_tl
+          const randomLinkId = this.generateRandomLinkId();
+          const affiliateLink = `https://www.amazon.ca/dp/${asin}?th=1&linkCode=ll1&tag=${settings.partnerId}&linkId=${randomLinkId}&language=en_CA&ref_=as_li_ss_tl`;
           
           products.push({
             asin,
@@ -344,6 +345,22 @@ export class AmazonService {
     let result = '';
     
     for (let i = 0; i < 10; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    return result;
+  }
+  
+  /**
+   * Generate a random link ID for affiliate links
+   * This creates a 32-character alphanumeric string similar to the one
+   * in the example affiliate link you provided
+   */
+  private generateRandomLinkId(): string {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    
+    for (let i = 0; i < 32; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     

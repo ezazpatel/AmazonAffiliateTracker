@@ -167,7 +167,7 @@ export class AnthropicService {
           messages: [{ role: "user", content: outlinePrompt }],
         });
 
-        const outlineText = extractTextFromResponse(outlineResponse);
+        const outlineText = this.extractTextContent(outlineResponse);
         console.log("Outline response text:", outlineText);
 
         const outlineJson =
@@ -201,7 +201,7 @@ export class AnthropicService {
           temperature: 0.7,
           messages: [{ role: "user", content: excerptPrompt }],
         });
-        const postExcerpt = trimToCompleteSentence(extractTextFromResponse(excerptResponse));
+        const postExcerpt = this.trimToCompleteSentence(this.extractTextContent(excerptResponse));
 
         let affiliateLinksHTML = "";
         if (Array.isArray(post.affiliateLinks) && post.affiliateLinks.length > 0) {
@@ -241,8 +241,8 @@ export class AnthropicService {
         fullContent += `<p><strong>${postExcerpt}</strong></p>\n\n`;
         fullContent += `${affiliateLinksHTML}\n\n`;
 
-        let introContent = extractTextFromResponse(introResponse);
-        introContent = trimToCompleteSentence(introContent);
+        let introContent = this.extractTextContent(introResponse);
+        introContent = this.trimToCompleteSentence(introContent);
         fullContent += `${introContent}\n\n`;
 
         // === Product Sections ===
@@ -275,19 +275,22 @@ export class AnthropicService {
             messages: [{ role: "user", content: productPrompt }],
           });
 
-          const productContent = trimToCompleteSentence(extractTextFromResponse(productResponse));
+          const productContent = this.trimToCompleteSentence(this.extractTextContent(productResponse));
           fullContent += productContent + "\n\n";
         }
 
         // === Wrap-Up Section ===
 
-        const wrapContent = trimToCompleteSentence(extractTextFromResponse(wrapResponse));
+
+
+
+        const wrapContent = this.trimToCompleteSentence(this.extractTextContent(wrapResponse));
         fullContent += wrapContent + "
 
       ";
 
         // === FAQ Section ===
-        const faqPrompt = `Write 5 detailed FAQs related to "${outlineResult.title}".
+        const faqPrompt = 'Write 5 detailed FAQs related to "${outlineResult.title}".
       Each FAQ should use <h3> for the question and <p> tags for the answer.
       Topics to cover:
       - Pricing expectations
@@ -304,7 +307,7 @@ export class AnthropicService {
           messages: [{ role: "user", content: faqPrompt }],
         });
 
-        const faqContent = trimToCompleteSentence(extractTextFromResponse(faqResponse));
+        const faqContent = this.trimToCompleteSentence(this.extractTextContent(faqResponse));
 fullContent += `<h2>Frequently Asked Questions</h2>
 
 ` + faqContent;
@@ -315,12 +318,10 @@ return {
   content: fullContent.trim(),
 };
 
-
-      } catch (error) {
-        console.error("Error generating content:", error);
-        throw error;
-      }
-
+        } catch (error) {
+          console.error("Anthropic content generation failed:", error);
+          throw new Error(`Failed to generate content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
       
       // Extract the content
       const content = this.extractTextContent(response);

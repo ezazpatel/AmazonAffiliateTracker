@@ -64,6 +64,34 @@ export class AnthropicService {
       throw new Error("Failed to extract text from Anthropic API response");
     }
   }
+
+  private trimToCompleteSentence(text: string): string {
+      if (text.endsWith(".") || text.endsWith("!") || text.endsWith("?")) {
+        return text;
+      }
+
+      const lastSentenceEnd = Math.max(
+        text.lastIndexOf(". "),
+        text.lastIndexOf("! "),
+        text.lastIndexOf("? "),
+      );
+
+      if (lastSentenceEnd > 0) {
+        return text.substring(0, lastSentenceEnd + 1);
+      }
+
+      const absoluteLastEnd = Math.max(
+        text.lastIndexOf("."),
+        text.lastIndexOf("!"),
+        text.lastIndexOf("?"),
+      );
+
+      if (absoluteLastEnd > 0) {
+        return text.substring(0, absoluteLastEnd + 1);
+      }
+
+      return text.trim();
+    }
   
   /**
    * Generate article content using Anthropic API
@@ -71,7 +99,6 @@ export class AnthropicService {
    */
   async generateArticleContent(
     keyword: string,
-    products: any[],
     post: {
       affiliateLinks?: any[];
       description?: string;
@@ -253,7 +280,6 @@ export class AnthropicService {
         }
 
         // === Wrap-Up Section ===
-  z`
 
         const wrapContent = trimToCompleteSentence(extractTextFromResponse(wrapResponse));
         fullContent += wrapContent + "

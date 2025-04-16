@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, primaryKey, foreignKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, primaryKey, foreignKey, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 import { z } from "zod";
@@ -30,14 +30,6 @@ export const articles = pgTable("articles", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const articlesRelations = relations(articles, ({ one, many }) => ({
-  keyword: one(keywords, {
-    fields: [articles.keywordId],
-    references: [keywords.id],
-  }),
-  products: many(products),
-}));
-
 export const insertArticleSchema = createInsertSchema(articles).omit({
   id: true,
   createdAt: true,
@@ -52,8 +44,24 @@ export const products = pgTable("products", {
   description: text("description"),
   imageUrl: text("image_url"),
   affiliateLink: text("affiliate_link").notNull(),
+  rating: real("rating").notNull(), // Corrected: using "real" column type for a float value
+  reviewCount: integer("review_count").notNull(), // Corrected: using integer column type
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const insertProductSchema = createInsertSchema(products).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Define relations after both articles and products are declared.
+export const articlesRelations = relations(articles, ({ one, many }) => ({
+  keyword: one(keywords, {
+    fields: [articles.keywordId],
+    references: [keywords.id],
+  }),
+  products: many(products),
+}));
 
 export const productsRelations = relations(products, ({ one }) => ({
   article: one(articles, {
@@ -61,11 +69,6 @@ export const productsRelations = relations(products, ({ one }) => ({
     references: [articles.id],
   }),
 }));
-
-export const insertProductSchema = createInsertSchema(products).omit({
-  id: true,
-  createdAt: true,
-});
 
 // Activities table to track system activities
 export const activities = pgTable("activities", {
@@ -112,7 +115,7 @@ export type InsertActivity = z.infer<typeof insertActivitySchema>;
 export type ApiSettings = typeof apiSettings.$inferSelect;
 export type InsertApiSettings = z.infer<typeof insertApiSettingsSchema>;
 
-// User types (from existing schema)
+// Users table (from existing schema)
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),

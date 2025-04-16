@@ -266,7 +266,7 @@ export class AnthropicService {
       Affiliate Link: ${product.affiliateLink}
 
       Subheadings:
-      ${section.subheadings.map((sub, i) => `${i + 1}. ${sub}`).join("\n")}
+      ${section.subheadings.map((sub, i) => `${i + 1}. ${sub}`).join("\n")}`;
 
           const productResponse = await client.messages.create({
             model: ANTHROPIC_MODEL,
@@ -299,7 +299,6 @@ export class AnthropicService {
 
         const wrapContent = this.trimToCompleteSentence(this.extractTextContent(wrapResponse));
         fullContent += wrapContent + "\n\n";
-
 
         // === FAQ Section ===
         const faqPrompt =

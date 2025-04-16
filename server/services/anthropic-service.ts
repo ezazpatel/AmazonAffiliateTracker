@@ -281,7 +281,20 @@ export class AnthropicService {
 
         // === Wrap-Up Section ===
 
+        const wrapPrompt = `Write a 400-token wrap-up section for the blog post titled "${outlineResult.title}".
+        Instructions:
+        - Summarize key insights from the product sections
+        - Highlight which product is best for different types of users
+        - Encourage the reader to take action and choose confidently
+        - Keep it in a friendly, helpful tone
+        Format using <h2> and <p> tags only.;
 
+        const wrapResponse = await client.messages.create({
+          model: ANTHROPIC_MODEL,
+          max_tokens: 400,
+          temperature: 0.7,
+          messages: [{ role: "user", content: wrapPrompt }],
+        });
 
 
         const wrapContent = this.trimToCompleteSentence(this.extractTextContent(wrapResponse));

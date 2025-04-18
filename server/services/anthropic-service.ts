@@ -127,8 +127,8 @@ export class AnthropicService {
         const mainKeywords = secondaryKeywords.length > 0 ? secondaryKeywords : keywords;
 
         const client = new Anthropic({ apiKey });
-        // Using a currently available model
-        const ANTHROPIC_MODEL = "claude-3-5-sonnet-20240620";
+        // the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
+        const ANTHROPIC_MODEL = "claude-3-7-sonnet-20250219";
 
         console.log('[AnthropicService] Step 1: Generating title and outline...');
         console.log('[AnthropicService] Available affiliate products:', affiliateLinks.map(link => ({

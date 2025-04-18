@@ -266,7 +266,7 @@ export class AnthropicService {
             affiliateConnection: section.affiliate_connection
           });
           
-          const product = affiliateLinks.find(p => p.name === section.affiliate_connection);
+          const product = affiliateLinks.find(p => p.title === section.affiliate_connection);
           if (!product) {
             console.warn('[AnthropicService] No matching product found for:', section.affiliate_connection);
             continue;

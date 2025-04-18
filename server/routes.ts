@@ -12,9 +12,25 @@ import { scheduler } from "./services/scheduler";
 // Set up multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Basic auth middleware
+const authMiddleware = async (req: any, res: any, next: any) => {
+  try {
+    const user = await storage.getUserBySession(req.session?.userId);
+    if (!user && !req.path.startsWith('/auth')) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    req.user = user;
+    next();
+  } catch (error) {
+    res.status(500).json({ message: 'Auth error' });
+  }
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize the scheduler
   scheduler.init();
+
+  app.use(authMiddleware); // Apply auth middleware
 
   // API Routes
   app.get("/api/dashboard/stats", async (req, res) => {
@@ -53,13 +69,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const page = parseInt(req.query.page as string) || 1;
       const search = (req.query.search as string) || "";
       const status = (req.query.status as string) || "all";
-      
+
       const limit = 10;
       const offset = (page - 1) * limit;
-      
+
       const { keywords, total } = await storage.getKeywords(limit, offset, search, status);
       const totalPages = Math.ceil(total / limit);
-      
+
       res.json({ keywords, totalPages, currentPage: page });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch keywords" });
@@ -88,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if selectedRows is provided
       const selectedRowsJSON = req.body.selectedRows;
       let selectedRows = [];
-      
+
       if (selectedRowsJSON) {
         try {
           selectedRows = JSON.parse(selectedRowsJSON);
@@ -102,7 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("No selected rows provided, parsing entire CSV file");
         const fileBuffer = req.file.buffer;
         const results: any[] = [];
-        
+
         await new Promise<void>((resolve, reject) => {
           Readable.from(fileBuffer)
             .pipe(csvParser())
@@ -124,14 +140,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               reject(error);
             });
         });
-        
+
         selectedRows = results;
       }
-      
+
       // Validate each row
       const validRows = [];
       const invalidRows = [];
-      
+
       for (const row of selectedRows) {
         try {
           // Check if data is present and well-formed
@@ -140,21 +156,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             invalidRows.push(row);
             continue;
           }
-          
+
           // Ensure dates are in correct format
           if (!/^\d{4}-\d{2}-\d{2}$/.test(row.scheduledDate)) {
             console.log("Invalid date format in row:", row);
             invalidRows.push(row);
             continue;
           }
-          
+
           // Ensure times are in correct format
           if (!/^\d{2}:\d{2}$/.test(row.scheduledTime)) {
             console.log("Invalid time format in row:", row);
             invalidRows.push(row);
             continue;
           }
-          
+
           const validatedRow = insertKeywordSchema.parse(row);
           validRows.push(validatedRow);
         } catch (error) {
@@ -162,26 +178,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           invalidRows.push(row);
         }
       }
-      
+
       console.log("Valid rows:", validRows.length);
       console.log("Invalid rows:", invalidRows.length);
-      
+
       if (validRows.length === 0) {
         return res.status(400).json({ 
           message: "No valid rows found in the uploaded file",
           details: "Make sure your CSV has the correct format with primary_keyword, scheduled_date, and scheduled_time columns"
         });
       }
-      
+
       // Save keywords to storage
       const savedKeywords = await storage.addKeywords(validRows);
-      
+
       // Log activity
       await storage.addActivity({
         activityType: "csv_imported",
         message: `Successfully imported ${validRows.length} keywords from CSV`,
       });
-      
+
       res.json({ 
         success: true, 
         count: validRows.length,
@@ -202,15 +218,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid keyword ID" });
       }
-      
+
       const keyword = await storage.getKeyword(id);
       if (!keyword) {
         return res.status(404).json({ message: "Keyword not found" });
       }
-      
+
       // Update keyword status to processing
       await storage.updateKeywordStatus(id, "processing");
-      
+
       // Start content generation in the background
       contentGenerator.generateContent(keyword)
         .then(() => {
@@ -229,7 +245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: `Failed to generate article for "${keyword.primaryKeyword}": ${error.message}`,
           });
         });
-      
+
       res.json({ success: true, message: "Content generation started" });
     } catch (error) {
       res.status(500).json({ message: "Failed to generate content" });
@@ -243,13 +259,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const search = (req.query.search as string) || "";
       const status = (req.query.status as string) || "all";
       const keywordId = req.query.keywordId ? parseInt(req.query.keywordId as string) : undefined;
-      
+
       const limit = 10;
       const offset = (page - 1) * limit;
-      
+
       const { articles, total } = await storage.getArticles(limit, offset, search, status, keywordId);
       const totalPages = Math.ceil(total / limit);
-      
+
       res.json({ articles, totalPages, currentPage: page });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch articles" });
@@ -278,6 +294,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to save API settings" });
     }
   });
+
+  app.use((req, res, next) => {
+    const start = Date.now();
+    const path = req.path;
+    next();
+  });
+
 
   const httpServer = createServer(app);
 

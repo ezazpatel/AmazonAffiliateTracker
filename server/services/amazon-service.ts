@@ -358,15 +358,14 @@ export class AmazonService {
       return topProducts;
     } catch (error) {
       console.error("Amazon product search failed:", error);
-      if (error instanceof Error) {
-        console.error(`Amazon API Error: ${error.message}`);
-        console.log(
-          "Amazon API requires valid credentials. Please verify your Partner ID, API Key, and Secret Key.",
-        );
-        throw new Error(`Failed to search Amazon products: ${error.message}`);
-      } else {
-        throw new Error(`Failed to search Amazon products: Unknown error`);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error(`Amazon API Error: ${errorMessage}`);
+      
+      if (errorMessage.includes('credentials')) {
+        console.log("Amazon API requires valid credentials. Please verify your Partner ID, API Key, and Secret Key.");
       }
+      
+      throw new Error(`Failed to search Amazon products: ${errorMessage}`);
     }
   }
 

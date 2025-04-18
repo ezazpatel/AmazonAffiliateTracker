@@ -117,6 +117,7 @@ export class AnthropicService {
       try {
         const keywords = [keyword];
         const secondaryKeywords = post.secondaryKeywords || [];
+        const affiliateLinks = Array.isArray(post.affiliateLinks) ? post.affiliateLinks : [];
         const mainKeywords = secondaryKeywords.length > 0 ? secondaryKeywords : keywords;
 
         const client = new Anthropic({ apiKey });
@@ -204,8 +205,8 @@ export class AnthropicService {
         const postExcerpt = this.trimToCompleteSentence(this.extractTextContent(excerptResponse));
 
         let affiliateLinksHTML = "";
-        if (Array.isArray(post.affiliateLinks) && post.affiliateLinks.length > 0) {
-          const validAffiliateLinks = post.affiliateLinks.filter(link => link.name && link.url);
+        if (affiliateLinks.length > 0) {
+        const validAffiliateLinks = affiliateLinks.filter(link => link.name && link.url);
           if (validAffiliateLinks.length > 0) {
             affiliateLinksHTML = `<div class=\"product-links\">\n` +
               validAffiliateLinks.map(link => `<p><strong>Best for:</strong> <a href=\"${link.url}\" target=\"_blank\" rel=\"nofollow\">${link.name}</a></p>`).join("\n") +
@@ -247,7 +248,7 @@ export class AnthropicService {
 
         // === Product Sections ===
         for (const section of outlineResult.outline || []) {
-          const product = post.affiliateLinks.find(p => p.name === section.affiliate_connection);
+          const product = affiliateLinks.find(p => p.name === section.affiliate_connection);
           if (!product) continue;
 
           const productPrompt = `Write a 400-token product review for "${product.title}".

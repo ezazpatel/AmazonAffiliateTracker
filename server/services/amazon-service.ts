@@ -222,7 +222,11 @@ export class AmazonService {
 
       let allItems: any[] = [];
 
-      for (let page = 1; page <= 10; page++) {
+        for (let page = 1; page <= 7; page++) {
+          if (page > 1) {
+            console.log(`Waiting 400ms before fetching page ${page}...`);
+          }
+            await this.sleep(400);
         const pagePayload = JSON.stringify({
           Keywords: keyword,
           PartnerTag: settings.partnerId,
@@ -439,6 +443,10 @@ export class AmazonService {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return result;
+  }
+
+  private async sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**

@@ -29,7 +29,7 @@ export class ContentGenerator {
       // Step 3: Generate article content using Anthropic
       const articleContent = await anthropicService.generateArticleContent(
         keyword.primaryKeyword,
-        products,
+        { affiliateLinks: products },
         { 
           maxTokens: 4000,
           temperature: 0.7 

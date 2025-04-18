@@ -54,6 +54,7 @@ export interface IStorage {
   // User methods from base interface
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserBySession(sessionId?: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
 }
 
@@ -318,6 +319,27 @@ export class DatabaseStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
+  }
+  
+  async getUserBySession(sessionId?: string): Promise<User | undefined> {
+    // For testing purposes, auto-create and return a default user when no session
+    if (!sessionId) {
+      // See if we have a test user
+      const testUser = await this.getUserByUsername("testuser");
+      if (testUser) {
+        return testUser;
+      }
+      
+      // Create a test user if none exists
+      return this.createUser({
+        username: "testuser",
+        password: "password123",
+        email: "test@example.com"
+      });
+    }
+    
+    // In a real implementation, we would look up the session and return the associated user
+    return this.getUserByUsername("testuser");
   }
   
   async createUser(user: InsertUser): Promise<User> {

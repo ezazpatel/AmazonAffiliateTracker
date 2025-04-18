@@ -127,7 +127,8 @@ export class AnthropicService {
         const mainKeywords = secondaryKeywords.length > 0 ? secondaryKeywords : keywords;
 
         const client = new Anthropic({ apiKey });
-        const ANTHROPIC_MODEL = "claude-3-5-haiku-latest";
+        // Using a currently available model
+        const ANTHROPIC_MODEL = "claude-3-5-sonnet-20240620";
 
         console.log('[AnthropicService] Step 1: Generating title and outline...');
         console.log('[AnthropicService] Available affiliate products:', affiliateLinks.map(link => ({
@@ -217,10 +218,18 @@ export class AnthropicService {
 
         let affiliateLinksHTML = "";
         if (affiliateLinks.length > 0) {
-        const validAffiliateLinks = affiliateLinks.filter(link => link.name && link.url);
+          // First ensure we have valid affiliate links with necessary properties
+          const validAffiliateLinks = affiliateLinks.filter(link => 
+            (link.name || link.title) && (link.url || link.affiliateLink)
+          );
+          
           if (validAffiliateLinks.length > 0) {
             affiliateLinksHTML = `<div class=\"product-links\">\n` +
-              validAffiliateLinks.map(link => `<p><strong>Best for:</strong> <a href=\"${link.url}\" target=\"_blank\" rel=\"nofollow\">${link.name}</a></p>`).join("\n") +
+              validAffiliateLinks.map(link => {
+                const linkName = link.name || link.title || "";
+                const linkUrl = link.url || link.affiliateLink || "";
+                return `<p><strong>Best for:</strong> <a href=\"${linkUrl}\" target=\"_blank\" rel=\"nofollow\">${linkName}</a></p>`;
+              }).join("\n") +
               `\n</div>`;
           }
         }
@@ -266,36 +275,47 @@ export class AnthropicService {
             affiliateConnection: section.affiliate_connection
           });
           
-          const product = affiliateLinks.find(p => p.title === section.affiliate_connection);
+          // Try to find matching product by title or name
+          const product = affiliateLinks.find(p => 
+            p.title === section.affiliate_connection || 
+            p.name === section.affiliate_connection
+          );
           if (!product) {
             console.warn('[AnthropicService] No matching product found for:', section.affiliate_connection);
             continue;
           }
           
+          // Get the necessary fields, handling potential undefined values
+          const title = product.title || product.name || "";
+          const asin = product.asin || "";
+          const description = product.description || "";
+          const imageUrl = product.imageUrl || "";
+          const affiliateLink = product.affiliateLink || product.url || "";
+          
           console.log('[AnthropicService] Found matching product:', {
-            title: product.title,
-            asin: product.asin,
-            hasImage: !!product.imageUrl,
-            hasAffiliate: !!product.affiliateLink
+            title,
+            asin,
+            hasImage: !!imageUrl,
+            hasAffiliate: !!affiliateLink
           });
 
-          const productPrompt = `Write a 400-token product review for "${product.title}".
+          const productPrompt = `Write a 400-token product review for "${title}".
       Include:
       - An <h2> tag with the product name, wrapped in a <a> to its affiliate URL
       - A product image wrapped in a <a> tag linking to the same affiliate URL
       - 1–2 <h3> subheadings and content for each
       - Real-world use cases, benefits, or specs as <p> content
-      - Use <ul> or <table> if needed for clarity
+      - Use <ul> or <table> for the product specifications
 
       Product Details:
-      Title: ${product.title}
-      ASIN: ${product.asin}
-      Description: ${product.description}
-      Image URL: ${product.imageUrl}
-      Affiliate Link: ${product.affiliateLink}
+      Title: ${title}
+      ASIN: ${asin}
+      Description: ${description}
+      Image URL: ${imageUrl}
+      Affiliate Link: ${affiliateLink}
 
       Subheadings:
-      ${section.subheadings.map((sub, i) => `${i + 1}. ${sub}`).join("\n")}`;
+      ${section.subheadings.map((sub: string, i: number) => `${i + 1}. ${sub}`).join("\n")}`;
 
           const productResponse = await client.messages.create({
             model: ANTHROPIC_MODEL,

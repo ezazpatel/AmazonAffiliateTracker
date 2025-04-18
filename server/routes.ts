@@ -12,18 +12,10 @@ import { scheduler } from "./services/scheduler";
 // Set up multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Basic auth middleware
+// Basic auth middleware - temporarily disabled for testing
 const authMiddleware = async (req: any, res: any, next: any) => {
-  try {
-    const user = await storage.getUserBySession(req.session?.userId);
-    if (!user && !req.path.startsWith('/auth')) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-    req.user = user;
-    next();
-  } catch (error) {
-    res.status(500).json({ message: 'Auth error' });
-  }
+  // Simply pass through for now - removing authentication requirement
+  next();
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {

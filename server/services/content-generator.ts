@@ -44,9 +44,20 @@ export class ContentGenerator {
         }))
       });
 
+      // Format products in the way the anthropic service expects them
+      const formattedProducts = products.map(p => ({
+        title: p.title,
+        name: p.title,
+        asin: p.asin,
+        description: p.description,
+        imageUrl: p.imageUrl,
+        affiliateLink: p.affiliateLink,
+        url: p.affiliateLink
+      }));
+      
       const articleContent = await anthropicService.generateArticleContent(
         keyword.primaryKeyword,
-        { affiliateLinks: products },
+        { affiliateLinks: formattedProducts },
         { 
           maxTokens: 4000,
           temperature: 0.7 

@@ -278,7 +278,21 @@ export class AmazonService {
         });
 
         if (!response.ok) {
-          console.warn(`Page ${page} failed. Skipping.`);
+          console.warn(`Page ${page} failed with status ${response.status}. Response:`, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+            body: await response.text().catch(e => `Failed to read body: ${e}`),
+          });
+          console.warn('Request details:', {
+            url,
+            pagePayload: JSON.parse(pagePayload),
+            headers: {
+              ...headers,
+              Authorization: '[masked]',
+              'Content-Length': Buffer.byteLength(pagePayload).toString(),
+            },
+          });
           continue;
         }
 

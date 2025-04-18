@@ -1,11 +1,11 @@
 Make sure the article format is good and it is generating enough content.
 Affiliate links are correctly formatted - check in the Amazon Link Checker to make sure they are valid.
 The content needs to be in simple HTMl and not react or markdown or whatever. Wordpress needs to recognize it without any fancy conversions.
-Header image needs to be created byb Anthropic or Dall-E. Try to see if product images can be used as the header image. This needs to be set as the featured image in Wordpress.
+Header image needs to be created by Anthropic or Dall-E. Try to see if product images can be used as the header image. This needs to be set as the featured image in Wordpress.
 How many products are being picked from Amazon? What is the criteria for picking these products?
 Use GetItems to get more product information and pass this on to Anthropic for content generation.
 Styling and CSS: Articles need to be professional looking and polished - think tables with specifications, amazon rating and price, inline product recommendations etc.
 Internal linking using wordpress_urls
 Create logic to publish article on Wordpress and generate the correct slug.  Use the snippet to add to the meta description on Wordpress.
 Tags and categories for Wordpress
-HOw to make sure the right products are selected? Currently the app is selecting doorbell mount when searching for 'ring doorbell for apartments'. This could be in a separate section called Related products but not as part of the main article.
+How to make sure the right products are selected? Currently the app is selecting doorbell mount when searching for 'ring doorbell for apartments'. This could be in a separate section called Related products but not as part of the main article.

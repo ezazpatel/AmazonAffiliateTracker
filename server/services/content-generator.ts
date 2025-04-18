@@ -13,20 +13,37 @@ export class ContentGenerator {
    */
   async generateContent(keyword: Keyword): Promise<void> {
     try {
-      console.log(`Starting content generation for: ${keyword.primaryKeyword}`);
+      console.log(`[ContentGenerator] Starting content generation for: ${keyword.primaryKeyword}`);
       
       // Both Amazon API and Anthropic API settings are now first checked from environment variables
       // in their respective services, so we don't need to manually check here.
       // The amazonService and anthropicService will handle the API key validation.
       
+      console.log('[ContentGenerator] Step 1: Searching for Amazon products...');
       // Step 2: Search Amazon for relevant products
       const products = await amazonService.searchProducts(keyword.primaryKeyword, 5);
+      console.log(`[ContentGenerator] Found ${products.length} products:`, products.map(p => ({
+        asin: p.asin,
+        title: p.title,
+        hasImage: !!p.imageUrl,
+        hasAffiliate: !!p.affiliateLink
+      })));
       
       if (products.length === 0) {
         throw new Error("No products found for this keyword");
       }
       
       // Step 3: Generate article content using Anthropic
+      console.log('[ContentGenerator] Step 2: Generating article content with Anthropic...');
+      console.log('[ContentGenerator] Passing affiliate data:', {
+        keyword: keyword.primaryKeyword,
+        productCount: products.length,
+        affiliateLinks: products.map(p => ({
+          title: p.title,
+          asin: p.asin
+        }))
+      });
+
       const articleContent = await anthropicService.generateArticleContent(
         keyword.primaryKeyword,
         { affiliateLinks: products },
@@ -35,6 +52,14 @@ export class ContentGenerator {
           temperature: 0.7 
         }
       );
+
+      console.log('[ContentGenerator] Step 3: Article content generated:', {
+        titleLength: articleContent.title.length,
+        contentLength: articleContent.content.length,
+        snippetLength: articleContent.snippet?.length,
+        hasProductLinks: articleContent.content.includes('product-links'),
+        affiliateLinkCount: (articleContent.content.match(/href=".*amazon\.com/g) || []).length
+      });
       
       // Step 4: Create the article in storage
       const articleData: InsertArticle = {

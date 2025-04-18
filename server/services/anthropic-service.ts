@@ -115,6 +115,12 @@ export class AnthropicService {
       
       // Create the system prompt for Anthropic
       try {
+        console.log('[AnthropicService] Starting article generation with:', {
+          primaryKeyword: keyword,
+          hasSecondaryKeywords: !!post.secondaryKeywords?.length,
+          affiliateLinksCount: post?.affiliateLinks?.length || 0
+        });
+
         const keywords = [keyword];
         const secondaryKeywords = post.secondaryKeywords || [];
         const affiliateLinks = Array.isArray(post.affiliateLinks) ? post.affiliateLinks : [];
@@ -123,7 +129,12 @@ export class AnthropicService {
         const client = new Anthropic({ apiKey });
         const ANTHROPIC_MODEL = "claude-3-5-haiku-latest";
 
-        console.log("Step 1: Generating title and outline...");   
+        console.log('[AnthropicService] Step 1: Generating title and outline...');
+        console.log('[AnthropicService] Available affiliate products:', affiliateLinks.map(link => ({
+          name: link.name,
+          asin: link.asin,
+          hasValidUrl: !!link.url
+        })));   
         const outlinePrompt = `You are a professional SEO blog writer for an Amazon affiliate website.
 
       Write a helpful and engaging blog post about: ${mainKeywords.join(", ")}.
@@ -247,9 +258,26 @@ export class AnthropicService {
         fullContent += `${introContent}\n\n`;
 
         // === Product Sections ===
+        console.log('[AnthropicService] Starting product sections generation');
         for (const section of outlineResult.outline || []) {
+          console.log('[AnthropicService] Processing section:', {
+            heading: section.heading,
+            subheadingsCount: section.subheadings.length,
+            affiliateConnection: section.affiliate_connection
+          });
+          
           const product = affiliateLinks.find(p => p.name === section.affiliate_connection);
-          if (!product) continue;
+          if (!product) {
+            console.warn('[AnthropicService] No matching product found for:', section.affiliate_connection);
+            continue;
+          }
+          
+          console.log('[AnthropicService] Found matching product:', {
+            title: product.title,
+            asin: product.asin,
+            hasImage: !!product.imageUrl,
+            hasAffiliate: !!product.affiliateLink
+          });
 
           const productPrompt = `Write a 400-token product review for "${product.title}".
       Include:

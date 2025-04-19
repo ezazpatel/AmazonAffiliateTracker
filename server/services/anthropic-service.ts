@@ -17,21 +17,21 @@ export class AnthropicService {
   private async getApiKey(): Promise<string> {
     // First try to get the key from environment variables
     const envApiKey = process.env.ANTHROPIC_API_KEY;
-    
+
     if (envApiKey) {
       return envApiKey;
     }
-    
+
     // Fallback to stored settings if env variable is not available
     const settings = await storage.getApiSettings();
-    
+
     if (!settings || !settings.anthropicApiKey) {
       throw new Error("Anthropic API key not configured");
     }
-    
+
     return settings.anthropicApiKey;
   }
-  
+
   /**
    * Safely extracts text content from Anthropic's response
    */
@@ -55,7 +55,7 @@ export class AnthropicService {
           .filter((item: any) => item && item.type === 'text')
           .map((item: any) => item.text)
           .join(' ');
-        
+
         if (textContent) {
           return textContent;
         }
@@ -71,7 +71,7 @@ export class AnthropicService {
       if (contentStr && contentStr !== '{}' && contentStr !== '[]') {
         return contentStr;
       }
-      
+
       throw new Error("Could not extract text from Anthropic API response");
     } catch (error) {
       console.error("Failed to extract text from response:", error);
@@ -107,7 +107,7 @@ export class AnthropicService {
 
       return text.trim();
     }
-  
+
   /**
    * Generate article content using Anthropic API
    * Creates an SEO-optimized affiliate article with proper product links and formatting
@@ -126,8 +126,8 @@ export class AnthropicService {
   ): Promise<ArticleContent> {
     try {
       const apiKey = await this.getApiKey();
-    
-      
+
+
       // Create the system prompt for Anthropic
       try {
         console.log('[AnthropicService] Starting article generation with:', {
@@ -154,24 +154,20 @@ export class AnthropicService {
 
       Write a helpful and engaging blog post about: ${mainKeywords.join(", ")}.
 
-      Please naturally incorporate these product-related keywords as well: ${keywords.join(", ")}.
-
-      ${
-          post.description ? `Additional Context from User:
-      ${post.description}` : ""
-        }
+      Use ONLY these specific Amazon products in your article:
+      ${affiliateLinks.map(p => `- ${p.title}`).join('\n      ')}
 
       Instructions:
       1. Use grade 5-6 level Canadian English
       2. Keep a warm, friendly tone like you're helping a fellow shopper
       3. Do NOT mention yourself or the writing process
-      4. Do NOT say “this article” or “this blog”
+      4. Do NOT say "this article" or "this blog"
       5. Create an SEO-friendly title (60–70 characters)
-      6. Create a clear outline with 2–3 main sections
+      6. Create sections for 2-3 of the provided Amazon products
       7. Each section should include:
-         - One H2 heading that’s relevant
+         - One H2 heading using the exact product name
          - 1–2 H3 subheadings underneath
-         - Each H2 must represent an affiliate product
+         - Each H2 must represent one of the provided products
          - Each product heading must be a clickable affiliate link
          - Each product image must also be a clickable affiliate link
 
@@ -280,13 +276,13 @@ export class AnthropicService {
             subheadingsCount: section.subheadings.length,
             affiliateConnection: section.affiliate_connection
           });
-          
+
           const product = affiliateLinks.find(p => p.title === section.affiliate_connection);
           if (!product) {
             console.warn('[AnthropicService] No matching product found for:', section.affiliate_connection);
             continue;
           }
-          
+
           console.log('[AnthropicService] Found matching product:', {
             title: product.title,
             asin: product.asin,
@@ -379,7 +375,7 @@ return {
           console.error("Anthropic content generation failed:", error);
           throw new Error(`Failed to generate content: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
-      
+
     } catch (error) {
       console.error("Anthropic FAQ generation failed:", error);
       throw new Error(`Failed to generate FAQs: ${error instanceof Error ? error.message : 'Unknown error'}`);

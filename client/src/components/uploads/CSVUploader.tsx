@@ -99,12 +99,9 @@ export default function CSVUploader() {
       return;
     }
     
+    setFile(file);
+    
     try {
-      setParsedData([]);
-      setValidRows([]);
-      setSelectedAll(false);
-      setFile(file);
-      
       console.log("Parsing CSV file:", file.name, file.type, file.size);
       
       const result = await parseCSV(file);

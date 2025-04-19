@@ -202,7 +202,13 @@ export class AnthropicService {
           throw new Error("Failed to extract JSON from outline response");
         }
 
-        let jsonStr = Array.isArray(outlineJson) ? outlineJson[1] || outlineJson[0] : outlineJson;
+        // Safely access array elements with null coalescing
+        let jsonStr = '';
+        if (Array.isArray(outlineJson)) {
+          jsonStr = outlineJson[1] ?? outlineJson[0] ?? outlineJson.toString();
+        } else {
+          jsonStr = outlineJson.toString();
+        }
         jsonStr = jsonStr.replace(/```json|```/g, "").trim();
         jsonStr = jsonStr.replace(/[\u0000-\u001F\u007F]/g, "");
 

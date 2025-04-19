@@ -37,30 +37,45 @@ export class AnthropicService {
    */
   private extractTextContent(response: any): string {
     try {
-      if (!response || !response.content || !response.content.length) {
+      // Log the response structure for debugging
+      console.log('[AnthropicService] Raw response structure:', JSON.stringify(response, null, 2));
+
+      if (!response) {
         throw new Error("Empty response from Anthropic API");
       }
-      
-      const firstContent = response.content[0];
-      
-      // Handle different response formats
-      if (typeof firstContent === 'string') {
-        return firstContent;
-      } else if (firstContent && typeof firstContent.text === 'string') {
-        return firstContent.text;
-      } else if (firstContent && firstContent.type === 'text' && typeof firstContent.text === 'string') {
-        return firstContent.text;
-      } else {
-        // If we can't find the text in expected places, try to stringify the entire response
-        const contentStr = JSON.stringify(firstContent);
-        if (contentStr && contentStr.length > 0) {
-          return contentStr;
+
+      // Handle Claude API v1 format
+      if (response.completion) {
+        return response.completion;
+      }
+
+      // Handle Claude API v2/v3 format
+      if (response.content && Array.isArray(response.content)) {
+        const textContent = response.content
+          .filter((item: any) => item && item.type === 'text')
+          .map((item: any) => item.text)
+          .join(' ');
+        
+        if (textContent) {
+          return textContent;
         }
+      }
+
+      // If direct text is available
+      if (typeof response.text === 'string') {
+        return response.text;
+      }
+
+      // Last resort: stringify the entire response
+      const contentStr = JSON.stringify(response);
+      if (contentStr && contentStr !== '{}' && contentStr !== '[]') {
+        return contentStr;
       }
       
       throw new Error("Could not extract text from Anthropic API response");
     } catch (error) {
       console.error("Failed to extract text from response:", error);
+      console.error("Response was:", response);
       throw new Error("Failed to extract text from Anthropic API response");
     }
   }

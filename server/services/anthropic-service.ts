@@ -228,10 +228,10 @@ export class AnthropicService {
 
         let affiliateLinksHTML = "";
         if (affiliateLinks.length > 0) {
-        const validAffiliateLinks = affiliateLinks.filter(link => link.name && link.url);
+          const validAffiliateLinks = affiliateLinks.filter(link => link.title && link.affiliateLink);
           if (validAffiliateLinks.length > 0) {
-            affiliateLinksHTML = `<div class=\"product-links\">\n` +
-              validAffiliateLinks.map(link => `<p><strong>Best for:</strong> <a href=\"${link.url}\" target=\"_blank\" rel=\"nofollow\">${link.name}</a></p>`).join("\n") +
+            affiliateLinksHTML = `<div class="product-links">\n` +
+              validAffiliateLinks.map(link => `<p><strong>Best for:</strong> <a href="${link.affiliateLink}" target="_blank" rel="nofollow">${link.title}</a></p>`).join("\n") +
               `\n</div>`;
           }
         }

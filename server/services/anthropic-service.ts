@@ -131,9 +131,9 @@ export class AnthropicService {
 
         console.log('[AnthropicService] Step 1: Generating title and outline...');
         console.log('[AnthropicService] Available affiliate products:', affiliateLinks.map(link => ({
-          name: link.name,
+          name: link.title,
           asin: link.asin,
-          hasValidUrl: !!link.url
+          hasValidUrl: !!link.affiliateLink
         })));   
         const outlinePrompt = `You are a professional SEO blog writer for an Amazon affiliate website.
 
@@ -266,7 +266,7 @@ export class AnthropicService {
             affiliateConnection: section.affiliate_connection
           });
           
-          const product = affiliateLinks.find(p => p.name === section.affiliate_connection);
+          const product = affiliateLinks.find(p => p.title === section.affiliate_connection);
           if (!product) {
             console.warn('[AnthropicService] No matching product found for:', section.affiliate_connection);
             continue;

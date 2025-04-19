@@ -296,9 +296,9 @@ export class AnthropicService {
 
           const productPrompt = `Write a 400-token product review for "${product.title}".
       Include:
-      - An <h2> tag with the product name, wrapped in a <a> to its affiliate URL
-      - A product image wrapped in a <a> tag linking to the same affiliate URL
-      - 1–2 <h3> subheadings and content for each
+      - Format the heading exactly like this: <h2><a href="${product.affiliateLink}" target="_blank" rel="nofollow">${product.title}</a></h2>
+      - Format the image exactly like this: <a href="${product.affiliateLink}" target="_blank" rel="nofollow"><img src="${product.imageUrl}" alt="${product.title}" /></a>
+      - 1–2 <h3> subheadings with detailed content for each
       - Real-world use cases, benefits, or specs as <p> content
       - Use <ul> or <table> if needed for clarity
 

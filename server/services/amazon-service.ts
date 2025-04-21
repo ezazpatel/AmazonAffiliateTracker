@@ -479,13 +479,15 @@ export class AmazonService {
   async getItemsDetails(asins: string[]): Promise<AmazonProduct[]> {
     const settings = await this.getApiSettings();
     const results: AmazonProduct[] = [];
+    const batchSize = 10;
 
-    for (const asin of asins) {
+    for (let i = 0; i < asins.length; i += batchSize) {
+      const batchAsins = asins.slice(i, i + batchSize);
       const payload = {
         PartnerTag: settings.partnerId,
         PartnerType: "Associates",
         Marketplace: "www.amazon.com",
-        ItemIds: [asin],
+        ItemIds: batchAsins,
         Resources: [
           "ItemInfo.Title",
           "ItemInfo.Features",
@@ -522,7 +524,8 @@ export class AmazonService {
         const json = await response.json();
         const item = json?.ItemsResult?.Items?.[0];
 
-        if (item) {
+        const items = json?.ItemsResult?.Items || [];
+        for (const item of items) {
           const offer = item.Offers?.Listings?.[0];
           results.push({
             asin: item.ASIN,
@@ -536,13 +539,15 @@ export class AmazonService {
             availabilityType: offer?.Availability?.Type ?? "",
             salesRank: item.BrowseNodeInfo?.BrowseNodes?.[0]?.SalesRank,
             affiliateLink: `https://www.amazon.com/dp/${item.ASIN}?tag=${settings.partnerId}`,
-            });
+          });
         }
       } catch (error) {
-        console.error(`❌ Error for ASIN ${asin}:`, error);
+        console.error(`❌ Error for batch:`, batchAsins, error);
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      if (i + batchSize < asins.length) {
+        await new Promise((resolve) => setTimeout(resolve, 1100));
+      }
         }
         return results;
       }

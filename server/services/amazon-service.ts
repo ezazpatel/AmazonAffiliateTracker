@@ -529,13 +529,18 @@ export class AmazonService {
   async getItemsDetails(asins: string[]): Promise<AmazonProduct[]> {
     if (asins.length === 0) return [];
 
+    console.log(`GetItems: Fetching details for ${asins.length} ASINs:`, asins);
     const settings = await this.getApiSettings();
+    
+    // Only take first 10 ASINs as per API limits
+    const selectedAsins = asins.slice(0, 10);
+    console.log(`GetItems: Processing first ${selectedAsins.length} ASINs:`, selectedAsins);
 
     const payload = {
       PartnerTag: settings.partnerId,
       PartnerType: "Associates",
       Marketplace: "www.amazon.com",
-      ItemIds: asins.slice(0, 10), // only 10 at a time
+      ItemIds: selectedAsins,
       Resources: [
         "ItemInfo.Title",
         "ItemInfo.Features",
@@ -549,10 +554,21 @@ export class AmazonService {
       ]
     };
 
+    console.log(`GetItems: Sending request with payload:`, JSON.stringify(payload, null, 2));
     const response = await this.signedAmazonRequest("paapi5/getitems", payload, settings);
 
-    if (!response.ok) throw new Error(`GetItems failed: ${response.statusText}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`GetItems failed with status ${response.status}:`, {
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        body: errorText
+      });
+      throw new Error(`GetItems failed: ${response.statusText} (${response.status})`);
+    }
+
     const data = await response.json();
+    console.log(`GetItems: Received response:`, JSON.stringify(data, null, 2));
 
     if (!data.ItemsResult?.Items || data.ItemsResult.Items.length === 0) {
       console.warn("⚠️ GetItems returned no valid items for ASINs:", asins);

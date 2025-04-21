@@ -15,7 +15,7 @@ export class ContentGenerator {
     try {
       console.log(`[ContentGenerator] Starting content generation for: ${keyword.primaryKeyword}`);
       
-      // Both Amazon API and Anthropic API settings are now first checked from environment variables
+      // Both Amazon API and Anthropic API settings are now first checked` from environment variables
       // in their respective services, so we don't need to manually check here.
       // The amazonService and anthropicService will handle the API key validation.
       

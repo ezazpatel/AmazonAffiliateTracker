@@ -150,35 +150,33 @@ export class AnthropicService {
           asin: link.asin,
           hasValidUrl: !!link.affiliateLink
         })));   
-        const outlinePrompt = `You are a professional SEO blog writer for an Amazon affiliate website.
+        const outlinePrompt = `Write a helpful, informative, and engaging blog post about: ${mainKeywords.join(", ")}.
 
-      Write a helpful and engaging blog post about: ${mainKeywords.join(", ")}.
+        You will NOT write any article content yet.
 
       Use ONLY these specific Amazon products in your article:
-      ${affiliateLinks.map(p => `- ${p.title}`).join('\n      ')}
+      ${affiliateLinks.map(p => `- ${p.title} (ASIN: ${p.asin})`).join("\n")}
+
+      Each section in the "outline" array must use the ASIN for 'affiliate_connection' instead of the product title.
 
       Instructions:
       1. Use grade 5-6 level Canadian English
       2. Keep a warm, friendly tone like you're helping a fellow shopper
       3. Do NOT mention yourself or the writing process
-      4. Do NOT say "this article" or "this blog"
-      5. Create an SEO-friendly title (60–70 characters)
-      6. Create sections for 2-3 of the provided Amazon products
-      7. Each section should include:
-         - One H2 heading using the exact product name
-         - 1–2 H3 subheadings underneath
-         - Each H2 must represent one of the provided products
-         - Each product heading must be a clickable affiliate link
-         - Each product image must also be a clickable affiliate link
+      4. Do NOT say "this article" or "this blog" or "this post"
+      5. DO NOT include any <h2>, <p>, or HTML tags
+      6. DO NOT generate the full article — JUST return the outline
+      7. Each section must be tied to one of the exact products listed above
 
+      // …
       Format your response as JSON:
       {
         "title": "Your Blog Post Title",
         "outline": [
           { 
-            "heading": "Product Section Title",
+            "heading": "Section Heading",
             "subheadings": ["Subheading 1", "Subheading 2"],
-            "affiliate_connection": "Name of the Amazon product to feature in this section"
+            "affiliate_connection": "B0DG2KWKCK"
           }
         ]
       }`;
@@ -209,12 +207,50 @@ export class AnthropicService {
         } else {
           jsonStr = outlineJson.toString();
         }
-        jsonStr = jsonStr.replace(/```json|```/g, "").trim();
-        jsonStr = jsonStr.replace(/[\u0000-\u001F\u007F]/g, "");
 
         let outlineResult;
         try {
-          outlineResult = JSON.parse(jsonStr);
+          let cleanedStr = jsonStr.replace(/```json|```/g, "").trim();
+          cleanedStr = cleanedStr.replace(/[\u0000-\u001F\u007F]/g, ""); // Strip bad control characters
+
+          outlineResult = JSON.parse(cleanedStr);
+
+          // 🛑 Detect if Claude hallucinated full blog content
+          if (
+            typeof outlineResult.content === "string" &&
+            /<h[1-3]>/i.test(outlineResult.content)
+          ) {
+            throw new Error("❌ Claude returned full article content instead of an outline. Aborting section generation.");
+          }
+
+          // 🧠 Handle if outline is wrapped under `content.outline`
+          if (outlineResult.content?.outline) {
+            outlineResult = {
+              title: outlineResult.title,
+              outline: outlineResult.content.outline,
+            };
+          }
+
+          // 🚦 verify every ASIN in the outline exists in our affiliate list
+          const badAsin = outlineResult.outline.find(
+            (sec: any) => !affiliateLinks.some(p => p.asin === sec.affiliate_connection)
+          );
+          if (badAsin) {
+            throw new Error("Claude returned an unknown ASIN in the outline.");
+          }
+
+          if (outlineResult.outline.length === 0) {
+            console.warn("⚠️ Outline array is empty. Claude may not have followed instructions.");
+          }
+
+          // ✅ Final guard
+          if (!Array.isArray(outlineResult.outline)) {
+            console.warn("⚠️ outlineResult.outline is not a valid array. Using fallback.");
+            outlineResult = {
+              title: outlineResult.title || "Blog Post",
+              outline: [],
+            };
+          }
         } catch (e) {
           console.error("Failed to parse outline JSON:", e, outlineJson);
           outlineResult = {
@@ -222,6 +258,7 @@ export class AnthropicService {
             outline: [],
           };
         }
+
 
         const excerptPrompt = `In a happy, cheerful, and conversational tone write a catchy, 1-2 sentence excerpt for a blog post titled "${outlineResult.title}" that entices readers to continue reading.`;
         const excerptResponse = await client.messages.create({
@@ -241,12 +278,13 @@ export class AnthropicService {
               `\n</div>`;
           }
         }
-
+        const firstHeading = outlineResult.outline?.[0]?.heading ?? "First Section";
+        
         const introPrompt = `Write an engaging introduction for "${outlineResult.title}".
       Include:
       - A hook that grabs attention
       - Brief mention of key benefits readers will get
-      - Natural transition to the first section: "${outlineResult.outline[0]?.heading || "First Section"}"
+      - Natural transition to the first section: "${firstHeading}"
       Instructions:
       1. Use grade 5-6 level Canadian English
       2. Keep a cheerful, friendly tone — like you're chatting with a fellow shopper
@@ -283,7 +321,10 @@ export class AnthropicService {
             affiliateConnection: section.affiliate_connection
           });
 
-          const product = affiliateLinks.find(p => p.title === section.affiliate_connection);
+          const product = affiliateLinks.find(
+            p => p.asin === section.affiliate_connection
+          );
+          
           if (!product) {
             console.warn('[AnthropicService] No matching product found for:', section.affiliate_connection);
             continue;
@@ -296,33 +337,40 @@ export class AnthropicService {
             hasAffiliate: !!product.affiliateLink
           });
 
-          const productPrompt = `Write a 400-token product review for "${product.title}".
-      Include:
-      - Format the heading exactly like this: <h2><a href="${product.affiliateLink}" target="_blank" rel="nofollow">${product.title}</a></h2>
-      - Format the image exactly like this: <a href="${product.affiliateLink}" target="_blank" rel="nofollow"><img src="${product.imageUrl}" alt="${product.title}" /></a>
-      - 1–2 <h3> subheadings with detailed content for each
-      - Real-world use cases, benefits, or specs as <p> content
-      - Use <ul> or <table> if needed for clarity
+          const productPrompt = `Write a detailed product review for "${product.title}" in a simple, informative, and benefit-driven tone.
 
-      Product Details:
-      Title: ${product.title}
+        Explain how each key feature BENEFITS the reader – don’t just list specs. Key features (use this to understand what the product does): ${product.description} and then use that information to write the review.
+        
+      Provide:
+      - <h2> heading that links to the product (as before)
+      - ${product.imageUrl ? "An image tag that links to the product" : "Skip the image if none is available"}
+      - A short price mention (e.g., "Around ${product.price}") if price is available
+      - Two <h3> sub‑sections:
+        1. "Why It’s Useful" – 120‑150 words focused on real‑world benefits
+        2. "Good to Know" – 80‑120 words on limitations, best‑use tips, or installation notes
+      - Use <ul> for 3‑5 quick‑hit pros
+
+      Product facts:
       ASIN: ${product.asin}
-      Description: ${product.description}
-      Image URL: ${product.imageUrl}
-      Affiliate Link: ${product.affiliateLink}
+      Price: ${product.price ?? "N/A"}
+      Rating: ${product.rating ?? "N/A"} (${product.reviewCount ?? 0} reviews)
+      Key features: ${product.description}`;
 
       Subheadings:
-      ${section.subheadings.map((sub, i) => `${i + 1}. ${sub}`).join("\n")}`;
+      ${section.subheadings.map((sub, i) => `${i + 1}. ${sub}`).join("\n")}
+          `;
 
-          const productResponse = await client.messages.create({
-            model: ANTHROPIC_MODEL,
-            max_tokens: 400,
-            temperature: 0.7,
-            messages: [{ role: "user", content: productPrompt }],
-          });
+      const productResponse = await client.messages.create({
+        model: ANTHROPIC_MODEL,
+        max_tokens: 1000,
+        temperature: 0.7,
+        messages: [{ role: "user", content: productPrompt }],
+      });
 
-          const productContent = this.trimToCompleteSentence(this.extractTextContent(productResponse));
-          fullContent += productContent + "\n\n";
+      const ratingBlock = `<p><strong>Rating:</strong> ⭐ ${product.rating} (${product.reviewCount} reviews)</p>`;
+          
+      const productContent = this.trimToCompleteSentence(this.extractTextContent(productResponse));
+          fullContent += `${ratingBlock}\n${productContent}\n\n`;
         }
 
         // === Wrap-Up Section ===
@@ -338,7 +386,7 @@ export class AnthropicService {
 
         const wrapResponse = await client.messages.create({
           model: ANTHROPIC_MODEL,
-          max_tokens: 400,
+          max_tokens: 500,
           temperature: 0.7,
           messages: [{ role: "user", content: wrapPrompt }],
         });
@@ -350,18 +398,12 @@ export class AnthropicService {
         const faqPrompt =
   "Write 5 detailed FAQs related to \"" + outlineResult.title + "\".\n" +
   "Each FAQ should use <h3> for the question and <p> tags for the answer.\n" +
-  "Example Topics to cover:\n" +
-  "- Pricing expectations\n" +
-  "- Ease of installation/setup\n" +
-  "- Who the product is for\n" +
-  "- Strengths vs. limitations\n" +
-  "- Comparison with other brands\n" +
   "Format using plain HTML. Avoid any markdown or extra syntax.";
 
 
         const faqResponse = await client.messages.create({
           model: ANTHROPIC_MODEL,
-          max_tokens: 800,
+          max_tokens: 1500,
           temperature: 0.7,
           messages: [{ role: "user", content: faqPrompt }],
         });

@@ -8,6 +8,7 @@ interface AmazonProduct {
   description: string;
   imageUrl: string;
   affiliateLink: string;
+  price?: string;
   rating?: number;
   reviewCount?: number;
 }
@@ -37,6 +38,84 @@ export class AmazonService {
     return signature;
   }
 
+  private async signedAmazonRequest(
+    target: string,
+    payload: any,
+    settings: { apiKey: string; secretKey: string; partnerId: string }
+  ): Promise<Response> {
+    const host = "webservices.amazon.com";
+    const uri = `/${target}`;
+    const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
+    const dateStamp = amzDate.slice(0, 8);
+    const region = "us-east-1";
+    const service = "ProductAdvertisingAPI";
+    const algorithm = "AWS4-HMAC-SHA256";
+
+    const op = target.split("/")[1];                    // e.g. "getitems"
+    const opName = op.charAt(0).toUpperCase() + op.slice(1);   // "GetItems"
+
+    const headers: Record<string, string> = {
+      host,
+      "content-type": "application/json; charset=utf-8",
+    
+      "x-amz-target": `com.amazon.paapi5.v1.ProductAdvertisingAPIv1.${opName}`,
+      "x-amz-date": amzDate,
+    };
+
+    const payloadString = JSON.stringify(payload);
+    const payloadHash = crypto.createHash("sha256").update(payloadString).digest("hex");
+
+    const canonicalHeaders =
+      Object.keys(headers)
+        .sort()
+        .map((key) => `${key}:${headers[key]}`)
+        .join("\n") + "\n";
+
+    const signedHeaders = Object.keys(headers).sort().join(";");
+
+    const canonicalRequest = [
+      "POST",
+      uri,
+      "",
+      canonicalHeaders,
+      signedHeaders,
+      payloadHash,
+    ].join("\n");
+
+    const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
+    const stringToSign = [
+      algorithm,
+      amzDate,
+      credentialScope,
+      crypto.createHash("sha256").update(canonicalRequest).digest("hex"),
+    ].join("\n");
+
+    const kDate = crypto
+      .createHmac("sha256", `AWS4${settings.secretKey}`)
+      .update(dateStamp)
+      .digest();
+    const kRegion = crypto.createHmac("sha256", kDate).update(region).digest();
+    const kService = crypto.createHmac("sha256", kRegion).update(service).digest();
+    const kSigning = crypto.createHmac("sha256", kService).update("aws4_request").digest();
+
+    const signature = crypto
+      .createHmac("sha256", kSigning)
+      .update(stringToSign)
+      .digest("hex");
+
+    const authorizationHeader = `${algorithm} Credential=${settings.apiKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+    return fetch(`https://${host}${uri}`, {
+      method: "POST",
+      headers: {
+        ...headers,
+        Authorization: authorizationHeader,
+        "Content-Length": Buffer.byteLength(payloadString).toString(),
+      },
+      body: payloadString,
+    });
+  }
+  
   /**
    * Search for products on Amazon using the Partner API.
    *
@@ -310,29 +389,18 @@ export class AmazonService {
 
       console.log(`Collected ${allItems.length} items from all pages`);
 
-      const mappedProducts: AmazonProduct[] = allItems.map((item: any) => {
-        const rating = Number(
-          item.CustomerReviews?.StarRating?.DisplayValue || 0,
-        );
-        const reviewCount = Number(item.CustomerReviews?.Count || 0);
-        return {
-          asin: item.ASIN,
-          title: item.ItemInfo.Title.DisplayValue,
-          description: item.ItemInfo.ByLineInfo?.Brand
-            ? `${item.ItemInfo.ByLineInfo.Brand.DisplayValue} product with excellent quality and value.`
-            : "Quality product from Amazon.",
-          imageUrl: item.Images.Primary.Large.URL,
-          affiliateLink: `https://www.amazon.com/dp/${item.ASIN}?tag=${settings.partnerId}&linkCode=ll1&language=en_US&ref_=as_li_ss_tl`,
-          rating,
-          reviewCount,
-        };
-      });
+      // --- NEW: get richer data for every ASIN we just found ---
+      const searchResults = allItems.map((item: any) => item.ASIN as string);
+      const enriched = await this.getItemsDetails(searchResults);
 
-      // Filter for main products with a non-zero title match score.
-      const eligibleProducts = mappedProducts.filter(
-        (product) =>
-          this.isMainProduct(product, keyword) &&
-          this.scoreProduct(product, keyword) > 0,
+      // keep only items that still have a working affiliate link
+      const eligibleProducts = enriched
+      .filter(p => p.affiliateLink)
+      .filter(p => 
+        p.rating !== undefined && 
+        p.reviewCount !== undefined &&
+        this.isMainProduct(p, keyword) && 
+        this.scoreProduct(p, keyword) > 0
       );
 
       if (eligibleProducts.length === 0) {
@@ -448,6 +516,47 @@ export class AmazonService {
   private async sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
+
+  async getItemsDetails(asins: string[]): Promise<AmazonProduct[]> {
+    if (asins.length === 0) return [];
+
+    const settings = await this.getApiSettings();
+
+    const payload = {
+      PartnerTag: settings.partnerId,
+      PartnerType: "Associates",
+      Marketplace: "www.amazon.com",
+      ItemIds: asins.slice(0, 10), // only 10 at a time
+      Resources: [
+        "ItemInfo.Title",
+        "ItemInfo.Features",
+        "ItemInfo.ProductInfo",
+        "ItemInfo.ManufactureInfo",
+        "ItemInfo.TechnicalInfo",
+        "Offers.Listings.Price",
+        "CustomerReviews.StarRating",
+        "CustomerReviews.Count",
+        "Images.Primary.Large"
+      ]
+    };
+
+    const response = await this.signedAmazonRequest("paapi5/getitems", payload, settings);
+
+    if (!response.ok) throw new Error(`GetItems failed: ${response.statusText}`);
+    const data = await response.json();
+
+    return data.ItemsResult?.Items?.map((item: any) => ({
+      asin: item.ASIN,
+      title: item.ItemInfo?.Title?.DisplayValue,
+      description: (item.ItemInfo?.Features?.DisplayValues ?? []).join("; "),
+      imageUrl: item.Images?.Primary?.Large?.URL,
+      price: item.Offers?.Listings?.[0]?.Price?.DisplayAmount,
+      rating: item.CustomerReviews?.StarRating?.AverageRating,
+      reviewCount: item.CustomerReviews?.Count,
+      affiliateLink: `https://www.amazon.com/dp/${item.ASIN}?tag=${settings.partnerId}`
+    })) ?? [];
+  }
+
 
   /**
    * Calculate a score for how closely a product title matches the keyword.

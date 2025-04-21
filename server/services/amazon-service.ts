@@ -391,17 +391,34 @@ export class AmazonService {
 
       // --- NEW: get richer data for every ASIN we just found ---
       // Do initial filtering with search data
-      const initialCandidates = allItems
-        .filter((item: any) => {
+      // Step 1: Score and filter raw search results
+      const scoredCandidates = allItems
+        .map((item: any) => {
           const title = item.ItemInfo?.Title?.DisplayValue || '';
-          return this.isMainProduct({ title, asin: item.ASIN } as AmazonProduct, keyword) &&
-                 this.scoreProduct({ title, asin: item.ASIN } as AmazonProduct, keyword) > 0;
+          const asin = item.ASIN;
+          const score = this.scoreProduct({ title, asin } as AmazonProduct, keyword);
+          return {
+            asin,
+            title,
+            score,
+            isMain: this.isMainProduct({ title, asin } as AmazonProduct, keyword)
+          };
         })
-        .slice(0, 20); // Limit to top 20 candidates
+        .filter(c => c.score > 0 && c.isMain);
 
-      // Only get details for promising candidates
-      const searchResults = initialCandidates.map((item: any) => item.ASIN as string);
-      const enriched = await this.getItemsDetails(searchResults);
+      // Step 2: Sort and pick top 5 before GetItems
+      const topAsins = scoredCandidates
+        .sort((a, b) => b.score - a.score)
+        .slice(0, count)
+        .map(c => c.asin);
+
+      // Guard: Don't call GetItems if there are no good ASINs
+      if (topAsins.length === 0) {
+        throw new Error(`No valid ASINs to fetch for keyword "${keyword}"`);
+      }
+
+      // Step 3: Only now enrich the top 5
+      const enriched = await this.getItemsDetails(topAsins);
 
       // Final filtering with complete data
       const eligibleProducts = enriched
@@ -553,6 +570,11 @@ export class AmazonService {
     if (!response.ok) throw new Error(`GetItems failed: ${response.statusText}`);
     const data = await response.json();
 
+    if (!data.ItemsResult?.Items || data.ItemsResult.Items.length === 0) {
+      console.warn("⚠️ GetItems returned no valid items for ASINs:", asins);
+      return []; // ← gracefully handle this
+    }
+
     return data.ItemsResult?.Items?.map((item: any) => ({
       asin: item.ASIN,
       title: item.ItemInfo?.Title?.DisplayValue,
@@ -562,9 +584,8 @@ export class AmazonService {
       rating: item.CustomerReviews?.StarRating?.AverageRating,
       reviewCount: item.CustomerReviews?.Count,
       affiliateLink: `https://www.amazon.com/dp/${item.ASIN}?tag=${settings.partnerId}`
-    })) ?? [];
+    }));
   }
-
 
   /**
    * Calculate a score for how closely a product title matches the keyword.

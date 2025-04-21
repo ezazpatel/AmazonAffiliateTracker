@@ -383,9 +383,15 @@ export class AmazonService {
       const allAsins = allItems.map((item: any) => item.ASIN);
       const enrichedProducts = await this.getItemsDetails(allAsins);
 
+      console.log(`[AmazonService] Starting with ${enrichedProducts.length} products`);
+      
       // Now score and filter with complete data
-      const eligibleProducts = enrichedProducts
-      .filter((p) => p.title && p.affiliateLink) // Basic validation
+      const productsWithScores = enrichedProducts
+      .filter((p) => {
+        const isValid = p.title && p.affiliateLink;
+        if (!isValid) console.log(`[AmazonService] Filtered out - Missing title/link: ${p.asin}`);
+        return isValid;
+      })
       .map((product) => ({
         ...product,
         score: this.scoreProduct(product, keyword),
@@ -394,25 +400,48 @@ export class AmazonService {
         isPrimeEligible: product.isPrimeEligible ?? false,
         condition: product.condition?.toLowerCase() ?? '',
         salesRank: product.salesRank ?? Infinity
-      }))
-      .filter(p =>
-        p.score > 0 &&
-        p.isMain &&
-        p.isBuyBoxWinner === true &&
-        p.condition?.toLowerCase() === 'new' &&
-        typeof p.salesRank === "number" &&
-        p.salesRank < 10000 &&
-        ["NOW", "IN_STOCK"].includes((p.availabilityType ?? "").toUpperCase())
-      )
+      }));
+
+      console.log(`[AmazonService] After scoring: ${productsWithScores.length} products`);
+      
+      const eligibleProducts = productsWithScores.filter(p => {
+        const reasons = [];
+        if (p.score === 0) reasons.push('score=0');
+        if (!p.isMain) reasons.push('not main product');
+        if (!p.isBuyBoxWinner) reasons.push('not buy box winner');
+        if (p.condition?.toLowerCase() !== 'new') reasons.push('not new condition');
+        if (typeof p.salesRank !== "number" || p.salesRank >= 10000) reasons.push(`invalid rank: ${p.salesRank}`);
+        if (!["NOW", "IN_STOCK"].includes((p.availabilityType ?? "").toUpperCase())) reasons.push(`invalid availability: ${p.availabilityType}`);
+        
+        const isEligible = reasons.length === 0;
+        if (!isEligible) {
+          console.log(`[AmazonService] Filtered out ${p.asin} - ${reasons.join(', ')}`);
+        }
+        return isEligible;
+      });
+
+      console.log(`[AmazonService] After filtering: ${eligibleProducts.length} eligible products`);
       .sort((a, b) => {
+        // First by sales rank
         if ((a.salesRank ?? Infinity) !== (b.salesRank ?? Infinity)) {
           return (a.salesRank ?? Infinity) - (b.salesRank ?? Infinity);
         }
+        // Then by Prime eligibility
         if (b.isPrimeEligible !== a.isPrimeEligible) {
           return b.isPrimeEligible ? 1 : -1;
         }
+        // Finally by keyword match score
         return b.score - a.score;
       });
+
+      console.log(`[AmazonService] Final sort order:`, 
+        eligibleProducts.slice(0, 5).map(p => ({
+          asin: p.asin,
+          salesRank: p.salesRank,
+          isPrime: p.isPrimeEligible,
+          score: p.score
+        }))
+      );
 
       const topProducts = eligibleProducts.slice(0, count);
       return topProducts;

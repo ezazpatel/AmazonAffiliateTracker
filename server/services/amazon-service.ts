@@ -421,7 +421,7 @@ export class AmazonService {
       });
 
       console.log(`[AmazonService] After filtering: ${eligibleProducts.length} eligible products`);
-      .sort((a, b) => {
+      }).sort((a, b) => {
         // First by sales rank
         if ((a.salesRank ?? Infinity) !== (b.salesRank ?? Infinity)) {
           return (a.salesRank ?? Infinity) - (b.salesRank ?? Infinity);

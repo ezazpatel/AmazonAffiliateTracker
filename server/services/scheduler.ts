@@ -5,7 +5,7 @@ import { type Keyword } from "@shared/schema";
 export class Scheduler {
   private schedulerInterval: NodeJS.Timeout | null = null;
   private isProcessing: boolean = false;
-  private readonly CHECK_INTERVAL_MS = 60000; // Check every minute
+  private readonly CHECK_INTERVAL_MS = 300000; // Check every 5 minutes
   
   /**
    * Initialize the scheduler

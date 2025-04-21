@@ -9,8 +9,11 @@ interface AmazonProduct {
   imageUrl: string;
   affiliateLink: string;
   price?: string;
-  rating?: number;
-  reviewCount?: number;
+  isBuyBoxWinner?: boolean;
+  isPrimeEligible?: boolean;
+  salesRank?: number;
+  condition?: string;
+  availabilityType?: string;
 }
 
 export class AmazonService {
@@ -127,19 +130,19 @@ export class AmazonService {
    *
    * This method performs the following steps:
    * 1. Retrieves 100 products from Amazon.
-   * 2. Maps each product to include rating and review count.
+   * 2. Maps each product to include key info like title, buy box, prime eligibility, etc.
    * 3. Filters out products that:
    *    - Are not considered "main" products (using isMainProduct).
    *    - Have a title match score of 0 (i.e. no keyword overlap).
+   *    - Are not Buy Box winners, not "New", not in stock, or have poor sales rank.
    * 4. Sorts the remaining products by:
-   *    - Highest title match quality first.
-   *    - Then by highest rating.
-   *    - Then by the highest review count.
+   *    - Best sales rank,
+   *    - Then by Prime eligibility,
+   *    - Then by title match score.
    * 5. Returns the first 5 products.
-   *
-   * Note: This approach first prioritizes title match while keeping criteria loose,
-   * and then ranks by rating and review count.
+  
    */
+  
   async searchProducts(
     keyword: string,
     count: number = 5,
@@ -171,40 +174,27 @@ export class AmazonService {
       const payload = JSON.stringify({
         Keywords: keyword,
         Resources: [
-          "BrowseNodeInfo.BrowseNodes",
-          "BrowseNodeInfo.BrowseNodes.Ancestor",
           "BrowseNodeInfo.BrowseNodes.SalesRank",
           "BrowseNodeInfo.WebsiteSalesRank",
-          "CustomerReviews.Count",
-          "CustomerReviews.StarRating",
           "Images.Primary.Large",
           "Images.Primary.HighRes",
           "ItemInfo.ByLineInfo",
           "ItemInfo.ContentInfo",
-          "ItemInfo.ContentRating",
           "ItemInfo.Classifications",
-          "ItemInfo.ExternalIds",
           "ItemInfo.Features",
           "ItemInfo.ProductInfo",
           "ItemInfo.TechnicalInfo",
           "ItemInfo.Title",
-          "Offers.Listings.Availability.MaxOrderQuantity",
-          "Offers.Listings.Availability.Message",
-          "Offers.Listings.Availability.MinOrderQuantity",
-          "Offers.Listings.Availability.Type",
-          "Offers.Listings.Condition",
-          "Offers.Listings.Condition.ConditionNote",
-          "Offers.Listings.Condition.SubCondition",
+          "OffersV2.Listings.Availability",
+          "OffersV2.Listings.Condition",
           "Offers.Listings.DeliveryInfo.IsAmazonFulfilled",
           "Offers.Listings.DeliveryInfo.IsFreeShippingEligible",
-          "Offers.Listings.DeliveryInfo.IsPrimeEligible",
+          "OffersV2.Listings.DeliveryInfo.IsPrimeEligible",
           "Offers.Listings.DeliveryInfo.ShippingCharges",
-          "Offers.Listings.IsBuyBoxWinner",
+          "OffersV2.Listings.IsBuyBoxWinner",
           "Offers.Listings.LoyaltyPoints.Points",
           "Offers.Listings.MerchantInfo",
-          "Offers.Listings.Price",
-          "Offers.Listings.ProgramEligibility.IsPrimeExclusive",
-          "Offers.Listings.ProgramEligibility.IsPrimePantry",
+          "OffersV2.Listings.Price",
           "Offers.Listings.Promotions",
           "Offers.Listings.SavingBasis",
           "Offers.Summaries.HighestPrice",
@@ -324,8 +314,6 @@ export class AmazonService {
           SortBy: "Featured",
           Resources: [
             "ItemInfo.Title",
-            "CustomerReviews.StarRating",
-            "CustomerReviews.Count",
             "Images.Primary.Large",
             "ItemInfo.ByLineInfo",
           ],
@@ -407,90 +395,35 @@ export class AmazonService {
       const allAsins = allItems.map((item: any) => item.ASIN);
       const enrichedProducts = await this.getItemsDetails(allAsins);
 
-      allProducts.forEach(p => {
-        const reasons = [];
-
-        if (!p.title || !p.affiliateLink) {
-          reasons.push("Missing title or affiliate link");
-        }
-
-        const score = this.scoreProduct(p, keyword);
-        if (score === 0) {
-          reasons.push("No keyword match in title");
-        }
-
-        const isMain = this.isMainProduct(p, keyword);
-        if (!isMain) {
-          reasons.push("Detected as accessory");
-        }
-
-        if ((p.rating ?? 0) < 4.3) {
-          reasons.push(`Rating too low: ${p.rating}`);
-        }
-
-        if ((p.reviewCount ?? 0) < 100) {
-          reasons.push(`Not enough reviews: ${p.reviewCount}`);
-        }
-
-        if (p.isBuyBoxWinner !== true) {
-          reasons.push("BuyBox not won");
-        }
-
-        if (!["NOW", "IN_STOCK"].includes((p.availabilityType ?? "").toUpperCase())) {
-          reasons.push(`Not in stock (availabilityType = ${p.availabilityType})`);
-        }
-
-        if (reasons.length > 0) {
-          console.log(`❌ Excluding ASIN ${p.asin} - ${p.title}`);
-          console.log("Reasons:", reasons.join("; "));
-        }
-      });
-
       // Now score and filter with complete data
-      const scoredProducts = enrichedProducts
-        .filter((p) => p.title && p.affiliateLink) // Basic validation
-        .map((product) => ({
-          ...product,
-          score: this.scoreProduct(product, keyword),
-          isMain: this.isMainProduct(product, keyword),
-        }))
-        .filter(
-          (p) =>
-            (p.score > 0 &&
-              p.isMain &&
-              (p.rating ?? 0) >= 4.3 &&
-              (p.reviewCount ?? 0) >= 100 &&
-              p.isBuyBoxWinner === true && // 👈 new hard‑requirement
-              p.availabilityType === "Now") ||
-            p.availabilityType === "IN_STOCK",
-        )
-
-        .sort((a, b) => {
-          if (b.score !== a.score) return b.score - a.score;
-          if ((b.rating || 0) !== (a.rating || 0))
-            return (b.rating || 0) - (a.rating || 0);
-          return (b.reviewCount || 0) - (a.reviewCount || 0);
-        });
-
-      const eligibleProducts = scoredProducts.slice(0, count);
-
-      if (eligibleProducts.length === 0) {
-        throw new Error(
-          `No products found meeting the criteria for keyword "${keyword}"`,
-        );
-      }
-
-      // Sort eligible products by:
-      // 1. Title match quality (scoreProduct),
-      // 2. Then by rating (highest first),
-      // 3. Then by review count (highest first).
-      eligibleProducts.sort((a, b) => {
-        const scoreA = this.scoreProduct(a, keyword);
-        const scoreB = this.scoreProduct(b, keyword);
-        if (scoreB !== scoreA) return scoreB - scoreA;
-        if ((b.rating || 0) !== (a.rating || 0))
-          return (b.rating || 0) - (a.rating || 0);
-        return (b.reviewCount || 0) - (a.reviewCount || 0);
+      const eligibleProducts = enrichedProducts
+      .filter((p) => p.title && p.affiliateLink) // Basic validation
+      .map((product) => ({
+        ...product,
+        score: this.scoreProduct(product, keyword),
+        isMain: this.isMainProduct(product, keyword),
+        isBuyBoxWinner: product.isBuyBoxWinner ?? false,
+        isPrimeEligible: product.isPrimeEligible ?? false,
+        condition: product.condition?.toLowerCase() ?? '',
+        salesRank: product.salesRank ?? Infinity
+      }))
+      .filter(p =>
+        p.score > 0 &&
+        p.isMain &&
+        p.isBuyBoxWinner === true &&
+        p.condition?.toLowerCase() === 'new' &&
+        typeof p.salesRank === "number" &&
+        p.salesRank < 10000 &&
+        ["NOW", "IN_STOCK"].includes((p.availabilityType ?? "").toUpperCase())
+      )
+      .sort((a, b) => {
+        if ((a.salesRank ?? Infinity) !== (b.salesRank ?? Infinity)) {
+          return (a.salesRank ?? Infinity) - (b.salesRank ?? Infinity);
+        }
+        if (b.isPrimeEligible !== a.isPrimeEligible) {
+          return b.isPrimeEligible ? 1 : -1;
+        }
+        return b.score - a.score;
       });
 
       const topProducts = eligibleProducts.slice(0, count);
@@ -559,13 +492,14 @@ export class AmazonService {
           "ItemInfo.ProductInfo",
           "ItemInfo.ManufactureInfo",
           "ItemInfo.TechnicalInfo",
-          "Offers.Listings.Price",
-          "CustomerReviews.StarRating",
-          "CustomerReviews.Count",
           "Images.Primary.Large",
+          "BrowseNodeInfo.BrowseNodes.SalesRank",
           "Offers.Listings.Availability.Message",
           "Offers.Listings.Availability.Type",
-          "Offers.Listings.IsBuyBoxWinner",
+          "OffersV2.Listings.Condition",
+          "OffersV2.Listings.DeliveryInfo.IsPrimeEligible",
+          "OffersV2.Listings.IsBuyBoxWinner",
+          "OffersV2.Listings.Price"
         ],
       };
 
@@ -589,33 +523,29 @@ export class AmazonService {
         const item = json?.ItemsResult?.Items?.[0];
 
         if (item) {
+          const offer = item.Offers?.Listings?.[0];
           results.push({
             asin: item.ASIN,
             title: item.ItemInfo?.Title?.DisplayValue,
             description: (item.ItemInfo?.Features?.DisplayValues ?? []).join("; "),
             imageUrl: item.Images?.Primary?.Large?.URL,
-            price: item.Offers?.Listings?.[0]?.Price?.DisplayAmount,
-            rating: item.CustomerReviews?.StarRating?.AverageRating,
-            reviewCount: item.CustomerReviews?.Count,
-            availabilityType: item.Offers?.Listings?.[0]?.Availability?.Type,
-            availabilityMsg: item.Offers?.Listings?.[0]?.Availability?.Message,
-            isBuyBoxWinner: item.Offers?.Listings?.[0]?.IsBuyBoxWinner ?? false,
-            buyBoxPrice: item.Offers?.Listings?.[0]?.Price?.DisplayAmount,
+            price: offer?.Price?.Money?.DisplayAmount,
+            isBuyBoxWinner: offer?.IsBuyBoxWinner ?? false,
+            isPrimeEligible: offer?.DeliveryInfo?.IsPrimeEligible ?? false,
+            condition: offer?.Condition?.Value ?? "",
+            availabilityType: offer?.Availability?.Type ?? "",
+            salesRank: item.BrowseNodeInfo?.BrowseNodes?.[0]?.SalesRank,
             affiliateLink: `https://www.amazon.com/dp/${item.ASIN}?tag=${settings.partnerId}`,
-          });
+            });
         }
-        
-    } catch (error) {
-      console.error(`❌ Error for ASIN ${asin}:`, error);
-    }
+      } catch (error) {
+        console.error(`❌ Error for ASIN ${asin}:`, error);
+      }
 
-    await new Promise((resolve) => setTimeout(resolve, 1100));
-  }
-} catch (err) {
-  console.error("Error during GetItems:", err);
-}
-
-return results;
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+        }
+        return results;
+      }
 
   /**
    * Calculate a score for how closely a product title matches the keyword.

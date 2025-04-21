@@ -391,42 +391,26 @@ export class AmazonService {
 
       // --- NEW: get richer data for every ASIN we just found ---
       // Do initial filtering with search data
-      // Step 1: Score and filter raw search results
-      const scoredCandidates = allItems
-        .map((item: any) => {
-          const title = item.ItemInfo?.Title?.DisplayValue || '';
-          const asin = item.ASIN;
-          const score = this.scoreProduct({ title, asin } as AmazonProduct, keyword);
-          return {
-            asin,
-            title,
-            score,
-            isMain: this.isMainProduct({ title, asin } as AmazonProduct, keyword)
-          };
-        })
-        .filter(c => c.score > 0 && c.isMain);
+      // Get details for all collected items first
+      const allAsins = allItems.map((item: any) => item.ASIN);
+      const enrichedProducts = await this.getItemsDetails(allAsins);
 
-      // Step 2: Sort and pick top 5 before GetItems
-      const topAsins = scoredCandidates
-        .sort((a, b) => b.score - a.score)
-        .slice(0, count)
-        .map(c => c.asin);
+      // Now score and filter with complete data
+      const scoredProducts = enrichedProducts
+        .filter(p => p.title && p.affiliateLink) // Basic validation
+        .map(product => ({
+          ...product,
+          score: this.scoreProduct(product, keyword),
+          isMain: this.isMainProduct(product, keyword)
+        }))
+        .filter(p => p.score > 0 && p.isMain)
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          if ((b.rating || 0) !== (a.rating || 0)) return (b.rating || 0) - (a.rating || 0);
+          return (b.reviewCount || 0) - (a.reviewCount || 0);
+        });
 
-      // Guard: Don't call GetItems if there are no good ASINs
-      if (topAsins.length === 0) {
-        throw new Error(`No valid ASINs to fetch for keyword "${keyword}"`);
-      }
-
-      // Step 3: Only now enrich the top 5
-      const enriched = await this.getItemsDetails(topAsins);
-
-      // Final filtering with complete data
-      const eligibleProducts = enriched
-        .filter(p => p.affiliateLink)
-        .filter(p => 
-          p.rating !== undefined && 
-          p.reviewCount !== undefined
-        );
+      const eligibleProducts = scoredProducts.slice(0, count);
 
       if (eligibleProducts.length === 0) {
         throw new Error(

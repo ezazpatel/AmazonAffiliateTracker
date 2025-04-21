@@ -354,10 +354,10 @@ export class AnthropicService {
       ASIN: ${product.asin}
       Price: ${product.price ?? "N/A"}
       Rating: ${product.rating ?? "N/A"} (${product.reviewCount ?? 0} reviews)
-      Key features: ${product.description}`;
+      Key features: ${product.description}
 
-          Subheadings:
-          ${section.subheadings.map((sub, i) => `${i + 1}. ${sub}`).join("\n")}
+      Subheadings:
+      ${section.subheadings.map((sub, i) => `${i + 1}. ${sub}`).join("\n")}`;
 
           const productResponse = await client.messages.create({
             model: ANTHROPIC_MODEL,

@@ -174,32 +174,29 @@ export class AmazonService {
       const payload = JSON.stringify({
         Keywords: keyword,
         Resources: [
+          "BrowseNodeInfo.BrowseNodes",
           "BrowseNodeInfo.BrowseNodes.SalesRank",
-          "BrowseNodeInfo.WebsiteSalesRank",
           "Images.Primary.Large",
-          "Images.Primary.HighRes",
           "ItemInfo.ByLineInfo",
           "ItemInfo.ContentInfo",
           "ItemInfo.Features",
           "ItemInfo.ProductInfo",
           "ItemInfo.TechnicalInfo",
           "ItemInfo.Title",
+          "Offers.Listings.Availability.Type",
+          "Offers.Listings.Condition",
           "Offers.Listings.DeliveryInfo.IsFreeShippingEligible",
-          "Offers.Listings.DeliveryInfo.ShippingCharges",
+          "Offers.Listings.DeliveryInfo.IsPrimeEligible",
+          "Offers.Listings.IsBuyBoxWinner",
+          "Offers.Listings.Price",
           "Offers.Listings.Promotions",
-          "OffersV2.Listings.Availability",
-          "OffersV2.Listings.Condition",
-          "OffersV2.Listings.DeliveryInfo.IsPrimeEligible",
-          "OffersV2.Listings.IsBuyBoxWinner",
-          "OffersV2.Listings.Price",
           "ParentASIN",
+          "SearchRefinements"
         ],
         PartnerTag: settings.partnerId,
         PartnerType: "Associates",
         Marketplace: "www.amazon.com",
-        ItemCount: initialItemCount,
-        Condition: "New",
-        SearchIndex: "All",
+        Operation: "SearchItems"
       });
 
       // Create request headers based on API specifications
@@ -475,26 +472,38 @@ export class AmazonService {
     for (let i = 0; i < asins.length; i += batchSize) {
       const batchAsins = asins.slice(i, i + batchSize);
       const payload = {
-        PartnerTag: settings.partnerId,
-        PartnerType: "Associates",
-        Marketplace: "www.amazon.com",
         ItemIds: batchAsins,
         Resources: [
-          "ItemInfo.Title",
+          "BrowseNodeInfo.BrowseNodes",
+          "BrowseNodeInfo.BrowseNodes.SalesRank",
+          "Images.Primary.Large",
+          "ItemInfo.ByLineInfo",
           "ItemInfo.Features",
           "ItemInfo.ProductInfo",
           "ItemInfo.TechnicalInfo",
-          "Images.Primary.Large",
-          "BrowseNodeInfo.BrowseNodes.SalesRank",
-          "BrowseNodeInfo.WebsiteSalesRank",
-          "Offers.Listings.Availability.Message",
+          "ItemInfo.Title",
           "Offers.Listings.Availability.Type",
+          "Offers.Listings.Condition",
+          "Offers.Listings.DeliveryInfo.IsFreeShippingEligible",
+          "Offers.Listings.DeliveryInfo.IsPrimeEligible",
+          "Offers.Listings.IsBuyBoxWinner",
+          "Offers.Listings.Price",
+          "Offers.Listings.Promotions",
+          "ParentASIN",
+          "OffersV2.Listings.Availability",
           "OffersV2.Listings.Condition",
-          "OffersV2.Listings.DeliveryInfo.IsPrimeEligible",
+          "OffersV2.Listings.DealDetails",
           "OffersV2.Listings.IsBuyBoxWinner",
-          "OffersV2.Listings.Price"
-        ],
-      }
+          "OffersV2.Listings.LoyaltyPoints",
+          "OffersV2.Listings.MerchantInfo",
+          "OffersV2.Listings.Price",
+          "OffersV2.Listings.Type"
+           ],
+           PartnerTag: settings.partnerId,
+           PartnerType: "Associates",
+           Marketplace: "www.amazon.com",
+           Operation: "GetItems"
+          };
 
       try {
         const response = await this.signedAmazonRequest(

@@ -390,18 +390,26 @@ export class AmazonService {
       console.log(`Collected ${allItems.length} items from all pages`);
 
       // --- NEW: get richer data for every ASIN we just found ---
-      const searchResults = allItems.map((item: any) => item.ASIN as string);
+      // Do initial filtering with search data
+      const initialCandidates = allItems
+        .filter((item: any) => {
+          const title = item.ItemInfo?.Title?.DisplayValue || '';
+          return this.isMainProduct({ title, asin: item.ASIN } as AmazonProduct, keyword) &&
+                 this.scoreProduct({ title, asin: item.ASIN } as AmazonProduct, keyword) > 0;
+        })
+        .slice(0, 20); // Limit to top 20 candidates
+
+      // Only get details for promising candidates
+      const searchResults = initialCandidates.map((item: any) => item.ASIN as string);
       const enriched = await this.getItemsDetails(searchResults);
 
-      // keep only items that still have a working affiliate link
+      // Final filtering with complete data
       const eligibleProducts = enriched
-      .filter(p => p.affiliateLink)
-      .filter(p => 
-        p.rating !== undefined && 
-        p.reviewCount !== undefined &&
-        this.isMainProduct(p, keyword) && 
-        this.scoreProduct(p, keyword) > 0
-      );
+        .filter(p => p.affiliateLink)
+        .filter(p => 
+          p.rating !== undefined && 
+          p.reviewCount !== undefined
+        );
 
       if (eligibleProducts.length === 0) {
         throw new Error(

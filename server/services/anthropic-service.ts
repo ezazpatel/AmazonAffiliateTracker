@@ -279,7 +279,7 @@ export class AnthropicService {
           }
         }
         const firstHeading = outlineResult.outline?.[0]?.heading ?? "First Section";
-        
+
         const introPrompt = `Write an engaging introduction for "${outlineResult.title}".
       Include:
       - A hook that grabs attention
@@ -324,7 +324,7 @@ export class AnthropicService {
           const product = affiliateLinks.find(
             p => p.asin === section.affiliate_connection
           );
-          
+
           if (!product) {
             console.warn('[AnthropicService] No matching product found for:', section.affiliate_connection);
             continue;
@@ -340,7 +340,7 @@ export class AnthropicService {
           const productPrompt = `Write a detailed product review for "${product.title}" in a simple, informative, and benefit-driven tone.
 
         Explain how each key feature BENEFITS the reader – don’t just list specs. Key features (use this to understand what the product does): ${product.description} and then use that information to write the review.
-        
+
       Provide:
       - <h2> heading that links to the product (as before)
       - ${product.imageUrl ? "An image tag that links to the product" : "Skip the image if none is available"}
@@ -356,21 +356,20 @@ export class AnthropicService {
       Rating: ${product.rating ?? "N/A"} (${product.reviewCount ?? 0} reviews)
       Key features: ${product.description}`;
 
-      Subheadings:
-      ${section.subheadings.map((sub, i) => `${i + 1}. ${sub}`).join("\n")}
-          `;
+          Subheadings:
+          ${section.subheadings.map((sub, i) => `${i + 1}. ${sub}`).join("\n")}
 
-      const productResponse = await client.messages.create({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 1000,
-        temperature: 0.7,
-        messages: [{ role: "user", content: productPrompt }],
-      });
+          const productResponse = await client.messages.create({
+            model: ANTHROPIC_MODEL,
+            max_tokens: 1000,
+            temperature: 0.7,
+            messages: [{ role: "user", content: productPrompt }],
+          });
 
-      const ratingBlock = `<p><strong>Rating:</strong> ⭐ ${product.rating} (${product.reviewCount} reviews)</p>`;
-          
-      const productContent = this.trimToCompleteSentence(this.extractTextContent(productResponse));
-          fullContent += `${ratingBlock}\n${productContent}\n\n`;
+          const ratingBlock = `<p><strong>Rating:</strong> ⭐ ${product.rating} (${product.reviewCount} reviews)</p>`;
+
+          const productContent = this.trimToCompleteSentence(this.extractTextContent(productResponse));
+            fullContent += `${ratingBlock}\n${productContent}\n\n`;
         }
 
         // === Wrap-Up Section ===
@@ -409,15 +408,15 @@ export class AnthropicService {
         });
 
         const faqContent = this.trimToCompleteSentence(this.extractTextContent(faqResponse));
-fullContent += `<h2>Frequently Asked Questions</h2>
+        fullContent += `<h2>Frequently Asked Questions</h2>
 
 ` + faqContent;
 
-return {
-  title: outlineResult.title,
-  snippet: postExcerpt,
-  content: fullContent.trim(),
-};
+        return {
+          title: outlineResult.title,
+          snippet: postExcerpt,
+          content: fullContent.trim(),
+        };
 
         } catch (error) {
           console.error("Anthropic content generation failed:", error);

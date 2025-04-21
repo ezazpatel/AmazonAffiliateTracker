@@ -515,8 +515,9 @@ export class AmazonService {
         if (!response.ok) {
           const errorText = await response.text();
           console.error(
-            `❌ Failed for ASIN ${asin} with status ${response.status}:`,
+            `❌ Failed for batch with status ${response.status}:`,
             errorText,
+            batchAsins
           );
           continue;
         }

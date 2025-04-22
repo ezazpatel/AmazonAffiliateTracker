@@ -244,11 +244,16 @@ export class AmazonService {
       // Now score and filter with complete data
       const productsWithScores = enrichedProducts
         .filter((p) => {
-          const isValid = p.title;
-          if (!isValid)
+          const reasons = [];
+          if (!p.title) reasons.push("missing title");
+          if (!p.asin) reasons.push("missing ASIN");
+          
+          const isValid = reasons.length === 0;
+          if (!isValid) {
             console.log(
-              `[AmazonService] Filtered out - Missing title: ${p.asin}`,
+              `[AmazonService] Filtered out - ${reasons.join(", ")}: ${p.asin || "unknown"}`,
             );
+          }
           return isValid;
         })
         .map((product) => ({

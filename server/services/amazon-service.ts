@@ -430,7 +430,7 @@ export class AmazonService {
     for (let i = 0; i < uncachedAsins.length; i += batchSize) {
       const batch = uncachedAsins.slice(i, i + batchSize);
       const payload = {
-        ItemIds: batch,
+        ItemIds: batchAsins,
         Resources: [
           "BrowseNodeInfo.BrowseNodes",
           "BrowseNodeInfo.BrowseNodes.SalesRank",
@@ -511,14 +511,14 @@ export class AmazonService {
           results.push(prod);
         }
       } catch (error) {
-        console.error(`❌ Error for batch:`, batch, error);
+        console.error(`❌ Error for batch:`, batchAsins, error);
       }
 
       if (i + batchSize < asins.length) {
         await new Promise((resolve) => setTimeout(resolve, 1100));
       }
     }
-    return results;
+    return [...cachedProducts, ...results];
   }
 
   /**

@@ -3,7 +3,28 @@ import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 import { z } from "zod";
 
+// Product details table to store cached Amazon product data
 export const productDetails = pgTable("product_details", {
+  id: serial("id").primaryKey(),
+  asin: text("asin").notNull().unique(),
+  title: text("title"),
+  description: text("description"),
+  image_url: text("image_url"),
+  price: text("price"),
+  is_buy_box_winner: boolean("is_buy_box_winner"),
+  is_prime_eligible: boolean("is_prime_eligible"), 
+  condition: text("condition"),
+  availability_type: text("availability_type"),
+  sales_rank: integer("sales_rank"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export type ProductDetails = typeof productDetails.$inferSelect;
+export type InsertProductDetails = typeof productDetails.$inferInsert;
+
+export const insertProductDetailsSchema = createInsertSchema(productDetails);
+
+export const keywords = pgTable("keywords", {
   id: serial("id").primaryKey(),
   asin: text("asin").notNull(),
   title: text("title"),

@@ -1,7 +1,22 @@
-import { pgTable, text, serial, integer, boolean, timestamp, primaryKey, foreignKey, real } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, text, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 import { z } from "zod";
+
+export const productDetails = pgTable("product_details", {
+  id: serial("id").primaryKey(),
+  asin: text("asin").notNull(),
+  title: text("title"),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  price: text("price"),
+  isBuyBoxWinner: boolean("is_buy_box_winner"),
+  isPrimeEligible: boolean("is_prime_eligible"),
+  condition: text("condition"),
+  availabilityType: text("availability_type"),
+  salesRank: integer("sales_rank"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
 // Keywords table to store upload CSV data
 export const keywords = pgTable("keywords", {

@@ -415,7 +415,21 @@ export class AmazonService {
     const results: AmazonProduct[] = [];
     const batchSize = 10;
 
-    for (let i = 0; i < asins.length; i += batchSize) {
+    // Check cache first
+    const cachedProducts: AmazonProduct[] = [];
+    const uncachedAsins: string[] = [];
+
+    for (const asin of asins) {
+      const cached = await storage.getProductDetails(asin);
+      if (cached) {
+        cachedProducts.push(cached);
+      } else {
+        uncachedAsins.push(asin);
+      }
+    }
+
+    // Only fetch uncached products
+    for (let i = 0; i < uncachedAsins.length; i += batchSize) {
       const batchAsins = asins.slice(i, i + batchSize);
       const payload = {
         ItemIds: batchAsins,
@@ -467,7 +481,7 @@ export class AmazonService {
         const items = json?.ItemsResult?.Items || [];
         for (const item of items) {
           const offer = item.Offers?.Listings?.[0];
-          results.push({
+          const productDetails = {
             asin: item.ASIN,
             title: item.ItemInfo?.Title?.DisplayValue,
             description: (item.ItemInfo?.Features?.DisplayValues ?? []).join(
@@ -481,7 +495,11 @@ export class AmazonService {
             availabilityType: offer?.Availability?.Type ?? "",
             salesRank: item.BrowseNodeInfo?.BrowseNodes?.[0]?.SalesRank,
             affiliateLink: `https://www.amazon.com/dp/${item.ASIN}?tag=${settings.partnerId}`,
-          });
+          };
+          
+          // Save to cache
+          await storage.saveProductDetails(productDetails);
+          results.push(productDetails);
         }
       } catch (error) {
         console.error(`❌ Error for batch:`, batchAsins, error);
@@ -491,7 +509,7 @@ export class AmazonService {
         await new Promise((resolve) => setTimeout(resolve, 1100));
       }
     }
-    return results;
+    return [...cachedProducts, ...results];
   }
 
   /**

@@ -253,6 +253,30 @@ export class DatabaseStorage implements IStorage {
     
     return newProduct;
   }
+
+  async hasProductDetails(asin: string): Promise<boolean> {
+    const [result] = await db.select()
+      .from(productDetails)
+      .where(eq(productDetails.asin, asin))
+      .limit(1);
+    return !!result;
+  }
+
+  async getProductDetails(asin: string): Promise<any> {
+    const [result] = await db.select()
+      .from(productDetails)
+      .where(eq(productDetails.asin, asin));
+    return result;
+  }
+
+  async saveProductDetails(details: any): Promise<void> {
+    await db.insert(productDetails)
+      .values(details)
+      .onConflictDoUpdate({
+        target: productDetails.asin,
+        set: details
+      });
+  }
   
   async countProducts(): Promise<number> {
     const [{ count }] = await db.select({ 

@@ -151,90 +151,9 @@ export class AmazonService {
         throw new Error("Amazon API settings are not available");
       }
 
-      // API endpoint details
-      const host = "webservices.amazon.com";
-      const region = "us-east-1";
-      const uri = "/paapi5/searchitems";
-      const service = "ProductAdvertisingAPI";
-
       console.log(
         `Using Amazon credentials - Partner ID: ${settings.partnerId}, API Key: [masked]`,
       );
-
-      // Get the current time in ISO format for request signing
-      const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
-      const dateStamp = amzDate.slice(0, 8);
-
-      // Create request headers based on API specifications
-      const algorithm = "AWS4-HMAC-SHA256";
-      const headers: Record<string, string> = {
-        host: host,
-        "content-type": "application/json; charset=utf-8",
-        "content-encoding": "amz-1.0",
-        "x-amz-target":
-          "com.amazon.paapi5.v1.ProductAdvertisingAPIv1.SearchItems",
-        "x-amz-date": amzDate,
-      };
-
-      // Build the canonical headers and signed headers strings for signing
-      const canonicalHeaders =
-        Object.keys(headers)
-          .sort()
-          .map((key) => `${key}:${headers[key]}`)
-          .join("\n") + "\n";
-      const signedHeaders = Object.keys(headers).sort().join(";");
-
-
-      // Build the string to sign
-      const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
-      const stringToSign = [
-        algorithm,
-        amzDate,
-        credentialScope,
-        crypto.createHash("sha256").update(canonicalRequest).digest("hex"),
-      ].join("\n");
-
-      // Calculate the signature
-      const kDate = crypto
-        .createHmac("sha256", `AWS4${settings.secretKey}`)
-        .update(dateStamp)
-        .digest();
-      const kRegion = crypto
-        .createHmac("sha256", kDate)
-        .update(region)
-        .digest();
-      const kService = crypto
-        .createHmac("sha256", kRegion)
-        .update(service)
-        .digest();
-      const kSigning = crypto
-        .createHmac("sha256", kService)
-        .update("aws4_request")
-        .digest();
-      const signature = crypto
-        .createHmac("sha256", kSigning)
-        .update(stringToSign)
-        .digest("hex");
-
-      // Create the authorization header
-      const authorizationHeader = `${algorithm} Credential=${settings.apiKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
-
-      // Make the API request to Amazon
-      const url = `https://${host}${uri}`;
-      console.log(`Making Amazon API request to: ${url}`);
-      console.log(
-        `Request headers:`,
-        JSON.stringify(
-          {
-            ...headers,
-            Authorization: authorizationHeader.substring(0, 60) + "...",
-            "Content-Length": Buffer.byteLength(payload).toString(),
-          },
-          null,
-          2,
-        ),
-      );
-      console.log(`Request payload: ${Payload}`);
 
       let allItems: any[] = [];
 

@@ -413,24 +413,22 @@ export class AmazonService {
   async getItemsDetails(asins: string[]): Promise<AmazonProduct[]> {
     const settings = await this.getApiSettings();
     const results: AmazonProduct[] = [];
-    const batchSize = 10;
 
-    // Check cache first
-    const cachedProducts: AmazonProduct[] = [];
+    // 1) Pull from cache first
     const uncachedAsins: string[] = [];
-
     for (const asin of asins) {
       const cached = await storage.getProductDetails(asin);
       if (cached) {
-        cachedProducts.push(cached);
+        results.push(cached as AmazonProduct);
       } else {
         uncachedAsins.push(asin);
       }
     }
 
-    // Only fetch uncached products
+    // 2) Only fetch the uncached ones, in batches
+    const batchSize = 10;
     for (let i = 0; i < uncachedAsins.length; i += batchSize) {
-      const batchAsins = asins.slice(i, i + batchSize);
+      const batch = uncachedAsins.slice(i, i + batchSize);
       const payload = {
         ItemIds: batchAsins,
         Resources: [
@@ -478,28 +476,39 @@ export class AmazonService {
         const json = await response.json();
         const item = json?.ItemsResult?.Items?.[0];
 
-        const items = json?.ItemsResult?.Items || [];
+        const items = json.ItemsResult?.Items || [];
         for (const item of items) {
-          const offer = item.Offers?.Listings?.[0];
-          const productDetails = {
+          const offer = item.Offers?.Listings?.[0] || {};
+          const prod: AmazonProduct = {
             asin: item.ASIN,
-            title: item.ItemInfo?.Title?.DisplayValue,
-            description: (item.ItemInfo?.Features?.DisplayValues ?? []).join(
-              "; ",
-            ),
-            imageUrl: item.Images?.Primary?.Large?.URL,
-            price: offer?.Price?.Money?.DisplayAmount,
-            isBuyBoxWinner: offer?.IsBuyBoxWinner ?? false,
-            isPrimeEligible: offer?.DeliveryInfo?.IsPrimeEligible ?? false,
-            condition: offer?.Condition?.Value ?? "",
-            availabilityType: offer?.Availability?.Type ?? "",
+            title: item.ItemInfo?.Title?.DisplayValue ?? "",
+            description: (item.ItemInfo?.Features?.DisplayValues ?? []).join("; "),
+            imageUrl: item.Images?.Primary?.Large?.URL ?? "",
+            price: offer.Price?.Money?.DisplayAmount,
+            isBuyBoxWinner: offer.IsBuyBoxWinner ?? false,
+            isPrimeEligible: offer.DeliveryInfo?.IsPrimeEligible ?? false,
+            condition: offer.Condition?.Value ?? "",
+            availabilityType: offer.Availability?.Type ?? "",
             salesRank: item.BrowseNodeInfo?.BrowseNodes?.[0]?.SalesRank,
             affiliateLink: `https://www.amazon.com/dp/${item.ASIN}?tag=${settings.partnerId}`,
           };
-          
-          // Save to cache
-          await storage.saveProductDetails(productDetails);
-          results.push(productDetails);
+
+          // 3) Save to cache
+          await storage.saveProductDetails({
+            asin: prod.asin,
+            title: prod.title,
+            description: prod.description,
+            image_url: prod.imageUrl,
+            price: prod.price,
+            is_buy_box_winner: prod.isBuyBoxWinner,
+            is_prime_eligible: prod.isPrimeEligible,
+            condition: prod.condition,
+            availability_type: prod.availabilityType,
+            sales_rank: prod.salesRank,
+          });
+
+          // 4) Add to results
+          results.push(prod);
         }
       } catch (error) {
         console.error(`❌ Error for batch:`, batchAsins, error);

@@ -167,7 +167,7 @@ export class AmazonService {
           console.log(`Waiting 1100ms before fetching page ${page}...`);
         }
         await this.sleep(1100);
-        const pagePayload = JSON.stringify({
+        const payload = {
           Keywords: keyword,
           PartnerTag: settings.partnerId,
           PartnerType: "Associates",
@@ -198,11 +198,11 @@ export class AmazonService {
             "ParentASIN",
             "SearchRefinements",
           ],
-        });
+        };
 
         const response = await this.signedAmazonRequest(
           "paapi5/searchitems",
-          JSON.parse(pagePayload),
+          payload,
           settings
         );
 

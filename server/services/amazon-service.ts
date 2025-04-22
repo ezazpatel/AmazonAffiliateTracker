@@ -228,7 +228,9 @@ export class AmazonService {
         if (items.length < 10 || allItems.length >= 50) break;
       }
 
-      console.log(`Collected ${allItems.length} items from all pages - pre-filtering now...`);
+      console.log(
+        `Collected ${allItems.length} items from all pages - pre-filtering now...`,
+      );
 
       // 1) Remove duplicates
       const uniqueByAsin = new Map<string, any>();
@@ -240,24 +242,26 @@ export class AmazonService {
       let filteredItems = Array.from(uniqueByAsin.values());
 
       // 2) Filter out backorder / no-stock
-      filteredItems = filteredItems.filter(item => {
+      filteredItems = filteredItems.filter((item) => {
         const listing = item.Offers?.Listings?.[0];
         const availability = listing?.Availability?.Type?.toUpperCase();
-        return listing 
-          && listing.Price                       // must have a price
-          && ['NOW', 'IN_STOCK'].includes(availability);
+        return (
+          listing &&
+          listing.Price && // must have a price
+          ["NOW", "IN_STOCK"].includes(availability)
+        );
       });
 
       // 3) (Optional) Filter obvious accessories by title
-      filteredItems = filteredItems.filter(item => {
-        const title = item.ItemInfo?.Title?.DisplayValue?.toLowerCase() || '';
+      filteredItems = filteredItems.filter((item) => {
+        const title = item.ItemInfo?.Title?.DisplayValue?.toLowerCase() || "";
         return !title.match(/\b(mount|case|accessory)\b/);
       });
 
       console.log(`After pre-filtering: ${filteredItems.length} items`);
 
       // Get details for filtered items
-      const allAsins = filteredItems.map(item => item.ASIN);
+      const allAsins = filteredItems.map((item) => item.ASIN);
       const enrichedProducts = await this.getItemsDetails(allAsins);
 
       console.log(
@@ -352,7 +356,7 @@ export class AmazonService {
 
       console.log(
         `[AmazonService] Final sort order:`,
-        eligibleProducts.slice(0, 5).map((p) => ({
+        eligibleProducts.slice(0, 7).map((p) => ({
           asin: p.asin,
           salesRank: p.salesRank,
           isPrime: p.isPrimeEligible,
@@ -362,27 +366,30 @@ export class AmazonService {
 
       const topProducts = eligibleProducts.slice(0, count);
       return topProducts;
-      } catch (error) {
-        console.error("Amazon product search failed:", error);
+    } catch (error) {
+      console.error("Amazon product search failed:", error);
 
-        if (error instanceof Error) {
-          console.error(`Amazon API Error: ${error.message}`);
+      if (error instanceof Error) {
+        console.error(`Amazon API Error: ${error.message}`);
 
-          // Only log credential hint on auth‑style errors
-          if (/InvalidAccessKeyId|SignatureDoesNotMatch|403|Unauthorized|AccessDenied/i.test(error.message)) {
-            console.log(
-              "Amazon API requires valid credentials. Please verify your Partner ID, API Key, and Secret Key.",
-            );
-          }
-
-          // Re‑throw with the original message
-          throw new Error(`Failed to search Amazon products: ${error.message}`);
-        } else {
-          // Non‑Error objects
-          throw new Error("Failed to search Amazon products: Unknown error");
+        // Only log credential hint on auth‑style errors
+        if (
+          /InvalidAccessKeyId|SignatureDoesNotMatch|403|Unauthorized|AccessDenied/i.test(
+            error.message,
+          )
+        ) {
+          console.log(
+            "Amazon API requires valid credentials. Please verify your Partner ID, API Key, and Secret Key.",
+          );
         }
-      }
 
+        // Re‑throw with the original message
+        throw new Error(`Failed to search Amazon products: ${error.message}`);
+      } else {
+        // Non‑Error objects
+        throw new Error("Failed to search Amazon products: Unknown error");
+      }
+    }
   }
 
   /**
@@ -439,7 +446,7 @@ export class AmazonService {
     for (let i = 0; i < uncachedAsins.length; i += batchSize) {
       const batch = uncachedAsins.slice(i, i + batchSize);
       const payload = {
-        ItemIds: batchAsins,
+        ItemIds: batch,
         Resources: [
           "BrowseNodeInfo.BrowseNodes",
           "BrowseNodeInfo.BrowseNodes.SalesRank",
@@ -477,13 +484,12 @@ export class AmazonService {
           console.error(
             `❌ Failed for batch with status ${response.status}:`,
             errorText,
-            batchAsins,
+            batch,
           );
           continue;
         }
 
         const json = await response.json();
-        const item = json?.ItemsResult?.Items?.[0];
 
         const items = json.ItemsResult?.Items || [];
         for (const item of items) {
@@ -491,7 +497,9 @@ export class AmazonService {
           const prod: AmazonProduct = {
             asin: item.ASIN,
             title: item.ItemInfo?.Title?.DisplayValue ?? "",
-            description: (item.ItemInfo?.Features?.DisplayValues ?? []).join("; "),
+            description: (item.ItemInfo?.Features?.DisplayValues ?? []).join(
+              "; ",
+            ),
             imageUrl: item.Images?.Primary?.Large?.URL ?? "",
             price: offer.Price?.Money?.DisplayAmount,
             isBuyBoxWinner: offer.IsBuyBoxWinner ?? false,
@@ -520,14 +528,14 @@ export class AmazonService {
           results.push(prod);
         }
       } catch (error) {
-        console.error(`❌ Error for batch:`, batchAsins, error);
+        console.error(`❌ Error for batch:`, batch, error);
       }
 
-      if (i + batchSize < asins.length) {
+      if (i + batchSize < uncachedAsins.length) {
         await new Promise((resolve) => setTimeout(resolve, 1100));
       }
     }
-    return [...cachedProducts, ...results];
+    return results;
   }
 
   /**

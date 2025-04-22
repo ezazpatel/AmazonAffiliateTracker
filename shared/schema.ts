@@ -1,3 +1,4 @@
+
 import { integer, pgTable, serial, text, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
@@ -23,21 +24,6 @@ export type ProductDetails = typeof productDetails.$inferSelect;
 export type InsertProductDetails = typeof productDetails.$inferInsert;
 
 export const insertProductDetailsSchema = createInsertSchema(productDetails);
-
-export const keywords = pgTable("keywords", {
-  id: serial("id").primaryKey(),
-  asin: text("asin").notNull(),
-  title: text("title"),
-  description: text("description"),
-  imageUrl: text("image_url"),
-  price: text("price"),
-  isBuyBoxWinner: boolean("is_buy_box_winner"),
-  isPrimeEligible: boolean("is_prime_eligible"),
-  condition: text("condition"),
-  availabilityType: text("availability_type"),
-  salesRank: integer("sales_rank"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
 
 // Keywords table to store upload CSV data
 export const keywords = pgTable("keywords", {
@@ -134,6 +120,18 @@ export const insertApiSettingsSchema = createInsertSchema(apiSettings).omit({
   updatedAt: true,
 });
 
+// Users table
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+});
+
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true,
+});
+
 export type Keyword = typeof keywords.$inferSelect;
 export type InsertKeyword = z.infer<typeof insertKeywordSchema>;
 
@@ -149,17 +147,5 @@ export type InsertActivity = z.infer<typeof insertActivitySchema>;
 export type ApiSettings = typeof apiSettings.$inferSelect;
 export type InsertApiSettings = z.infer<typeof insertApiSettingsSchema>;
 
-// Users table (from existing schema)
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-});
-
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;

@@ -244,10 +244,10 @@ export class AmazonService {
       // Now score and filter with complete data
       const productsWithScores = enrichedProducts
         .filter((p) => {
-          const isValid = p.title && p.affiliateLink;
+          const isValid = p.title;
           if (!isValid)
             console.log(
-              `[AmazonService] Filtered out - Missing title/link: ${p.asin}`,
+              `[AmazonService] Filtered out - Missing title: ${p.asin}`,
             );
           return isValid;
         })

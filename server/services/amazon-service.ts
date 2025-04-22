@@ -338,16 +338,21 @@ export class AmazonService {
           return isEligible;
         })
         .sort((a, b) => {
-          // First by sales rank
-          if ((a.salesRank ?? Infinity) !== (b.salesRank ?? Infinity)) {
-            return (a.salesRank ?? Infinity) - (b.salesRank ?? Infinity);
+          // 1) Highest keyword-match score first
+          if (b.score !== a.score) {
+            return b.score - a.score;
           }
-          // Then by Prime eligibility
+          // 2) Then best sales rank (smallest number)
+          const rankA = a.salesRank ?? Infinity;
+          const rankB = b.salesRank ?? Infinity;
+          if (rankA !== rankB) {
+            return rankA - rankB;
+          }
+          // 3) Then Prime-eligible items
           if (b.isPrimeEligible !== a.isPrimeEligible) {
             return b.isPrimeEligible ? 1 : -1;
           }
-          // Finally by keyword match score
-          return b.score - a.score;
+          return 0;
         });
 
       console.log(

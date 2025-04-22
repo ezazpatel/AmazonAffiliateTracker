@@ -72,6 +72,11 @@ export class AmazonService {
 
     const signedHeaders = Object.keys(headers).sort().join(";");
 
+    const payloadHash = crypto
+      .createHash("sha256")
+      .update(payloadString)
+      .digest("hex");
+
     const canonicalRequest = [
       "POST",
       uri,
@@ -136,7 +141,7 @@ export class AmazonService {
    *    - Then by Prime eligibility,
    *    - Then by title match score.
    * 5. Returns the first 5 products.
-  
+
    */
 
   async searchProducts(

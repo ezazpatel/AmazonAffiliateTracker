@@ -362,18 +362,27 @@ export class AmazonService {
 
       const topProducts = eligibleProducts.slice(0, count);
       return topProducts;
-    } catch (error) {
-      console.error("Amazon product search failed:", error);
-      if (error instanceof Error) {
-        console.error(`Amazon API Error: ${error.message}`);
-        console.log(
-          "Amazon API requires valid credentials. Please verify your Partner ID, API Key, and Secret Key.",
-        );
-        throw new Error(`Failed to search Amazon products: ${error.message}`);
-      } else {
-        throw new Error(`Failed to search Amazon products: Unknown error`);
+      } catch (error) {
+        console.error("Amazon product search failed:", error);
+
+        if (error instanceof Error) {
+          console.error(`Amazon API Error: ${error.message}`);
+
+          // Only log credential hint on auth‑style errors
+          if (/InvalidAccessKeyId|SignatureDoesNotMatch|403|Unauthorized|AccessDenied/i.test(error.message)) {
+            console.log(
+              "Amazon API requires valid credentials. Please verify your Partner ID, API Key, and Secret Key.",
+            );
+          }
+
+          // Re‑throw with the original message
+          throw new Error(`Failed to search Amazon products: ${error.message}`);
+        } else {
+          // Non‑Error objects
+          throw new Error("Failed to search Amazon products: Unknown error");
+        }
       }
-    }
+
   }
 
   /**

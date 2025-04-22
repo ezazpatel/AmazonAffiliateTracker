@@ -16,7 +16,8 @@ import {
   products,
   activities,
   apiSettings,
-  users
+  users,
+  productDetails,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, like, desc, sql, asc } from "drizzle-orm";

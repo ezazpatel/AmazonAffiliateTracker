@@ -162,7 +162,7 @@ export class AmazonService {
 
       let allItems: any[] = [];
 
-      for (let page = 1; page <= 10; page++) {
+      for (let page = 1; page <= 5; page++) {
         if (page > 1) {
           console.log(`Waiting 1100ms before fetching page ${page}...`);
         }
@@ -202,7 +202,7 @@ export class AmazonService {
         const response = await this.signedAmazonRequest(
           "paapi5/searchitems",
           payload,
-          settings
+          settings,
         );
 
         if (!response.ok) {
@@ -225,7 +225,7 @@ export class AmazonService {
         allItems.push(...items);
 
         // Early exit if fewer than 10 results returned
-        if (items.length < 10) break;
+        if (items.length < 10 || allItems.length >= 50) break;
       }
 
       console.log(`Collected ${allItems.length} items from all pages`);
@@ -257,7 +257,7 @@ export class AmazonService {
           const reasons = [];
           if (!p.title) reasons.push("missing title");
           if (!p.asin) reasons.push("missing ASIN");
-          
+
           const isValid = reasons.length === 0;
           if (!isValid) {
             console.log(
@@ -269,7 +269,7 @@ export class AmazonService {
         .map((product) => {
           const score = this.scoreProduct(product, keyword);
           const isMain = this.isMainProduct(product, keyword);
-          
+
           console.log(`[AmazonService] Scoring ASIN ${product.asin}:`, {
             title: product.title,
             score,
@@ -279,7 +279,7 @@ export class AmazonService {
             condition: product.condition?.toLowerCase() ?? "",
             salesRank: product.salesRank ?? Infinity,
           });
-          
+
           return {
             ...product,
             score,

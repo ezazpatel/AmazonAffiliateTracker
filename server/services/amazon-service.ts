@@ -231,6 +231,17 @@ export class AmazonService {
 
       console.log(`Collected ${allItems.length} items from all pages`);
 
+      // Log initial ASINs and why they were found
+      allItems.forEach((item: any) => {
+        console.log(`[AmazonService] Found ASIN ${item.ASIN}:`, {
+          title: item.ItemInfo?.Title?.DisplayValue,
+          rank: item.BrowseNodeInfo?.BrowseNodes?.[0]?.SalesRank,
+          availability: item.Offers?.Listings?.[0]?.Availability?.Type,
+          condition: item.Offers?.Listings?.[0]?.Condition?.Value,
+          price: item.Offers?.Listings?.[0]?.Price?.DisplayAmount,
+        });
+      });
+
       // --- NEW: get richer data for every ASIN we just found ---
       // Do initial filtering with search data
       // Get details for all collected items first
@@ -256,15 +267,30 @@ export class AmazonService {
           }
           return isValid;
         })
-        .map((product) => ({
-          ...product,
-          score: this.scoreProduct(product, keyword),
-          isMain: this.isMainProduct(product, keyword),
-          isBuyBoxWinner: product.isBuyBoxWinner ?? false,
-          isPrimeEligible: product.isPrimeEligible ?? false,
-          condition: product.condition?.toLowerCase() ?? "",
-          salesRank: product.salesRank ?? Infinity,
-        }));
+        .map((product) => {
+          const score = this.scoreProduct(product, keyword);
+          const isMain = this.isMainProduct(product, keyword);
+          
+          console.log(`[AmazonService] Scoring ASIN ${product.asin}:`, {
+            title: product.title,
+            score,
+            isMain,
+            isBuyBoxWinner: product.isBuyBoxWinner ?? false,
+            isPrimeEligible: product.isPrimeEligible ?? false,
+            condition: product.condition?.toLowerCase() ?? "",
+            salesRank: product.salesRank ?? Infinity,
+          });
+          
+          return {
+            ...product,
+            score,
+            isMain,
+            isBuyBoxWinner: product.isBuyBoxWinner ?? false,
+            isPrimeEligible: product.isPrimeEligible ?? false,
+            condition: product.condition?.toLowerCase() ?? "",
+            salesRank: product.salesRank ?? Infinity,
+          };
+        });
 
       console.log(
         `[AmazonService] After scoring: ${productsWithScores.length} products`,

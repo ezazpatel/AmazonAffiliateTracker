@@ -408,13 +408,6 @@ export class AnthropicService {
             messages: [{ role: "user", content: productPrompt }],
           });
 
-          const ratingText =
-            product.rating && product.reviewCount
-              ? `⭐ ${product.rating} (${product.reviewCount} reviews)`
-              : `No reviews yet`;
-
-          const ratingBlock = `<p><strong>Rating:</strong> ${ratingText}</p>`;
-
           let productContent = this.trimToCompleteSentence(
             this.extractTextContent(productResponse),
           );

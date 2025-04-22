@@ -228,23 +228,36 @@ export class AmazonService {
         if (items.length < 10 || allItems.length >= 50) break;
       }
 
-      console.log(`Collected ${allItems.length} items from all pages`);
+      console.log(`Collected ${allItems.length} items from all pages - pre-filtering now...`);
 
-      // Log initial ASINs and why they were found
-      allItems.forEach((item: any) => {
-        console.log(`[AmazonService] Found ASIN ${item.ASIN}:`, {
-          title: item.ItemInfo?.Title?.DisplayValue,
-          rank: item.BrowseNodeInfo?.BrowseNodes?.[0]?.SalesRank,
-          availability: item.Offers?.Listings?.[0]?.Availability?.Type,
-          condition: item.Offers?.Listings?.[0]?.Condition?.Value,
-          price: item.Offers?.Listings?.[0]?.Price?.DisplayAmount,
-        });
+      // 1) Remove duplicates
+      const uniqueByAsin = new Map<string, any>();
+      for (const item of allItems) {
+        if (!uniqueByAsin.has(item.ASIN)) {
+          uniqueByAsin.set(item.ASIN, item);
+        }
+      }
+      let filteredItems = Array.from(uniqueByAsin.values());
+
+      // 2) Filter out backorder / no-stock
+      filteredItems = filteredItems.filter(item => {
+        const listing = item.Offers?.Listings?.[0];
+        const availability = listing?.Availability?.Type?.toUpperCase();
+        return listing 
+          && listing.Price                       // must have a price
+          && ['NOW', 'IN_STOCK'].includes(availability);
       });
 
-      // --- NEW: get richer data for every ASIN we just found ---
-      // Do initial filtering with search data
-      // Get details for all collected items first
-      const allAsins = allItems.map((item: any) => item.ASIN);
+      // 3) (Optional) Filter obvious accessories by title
+      filteredItems = filteredItems.filter(item => {
+        const title = item.ItemInfo?.Title?.DisplayValue?.toLowerCase() || '';
+        return !title.match(/\b(mount|case|accessory)\b/);
+      });
+
+      console.log(`After pre-filtering: ${filteredItems.length} items`);
+
+      // Get details for filtered items
+      const allAsins = filteredItems.map(item => item.ASIN);
       const enrichedProducts = await this.getItemsDetails(allAsins);
 
       console.log(

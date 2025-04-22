@@ -195,41 +195,11 @@ export class AmazonService {
           ],
         });
 
-        const payloadHash = crypto
-          .createHash("sha256")
-          .update(pagePayload)
-          .digest("hex");
-        const canonicalRequest = [
-          "POST",
-          uri,
-          "",
-          canonicalHeaders,
-          signedHeaders,
-          payloadHash,
-        ].join("\n");
-
-        const stringToSign = [
-          algorithm,
-          amzDate,
-          credentialScope,
-          crypto.createHash("sha256").update(canonicalRequest).digest("hex"),
-        ].join("\n");
-
-        const signature = crypto
-          .createHmac("sha256", kSigning)
-          .update(stringToSign)
-          .digest("hex");
-        const authorizationHeaderPaged = `${algorithm} Credential=${settings.apiKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
-
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            ...headers,
-            Authorization: authorizationHeaderPaged,
-            "Content-Length": Buffer.byteLength(pagePayload).toString(),
-          },
-          body: pagePayload,
-        });
+        const response = await this.signedAmazonRequest(
+          "paapi5/searchitems",
+          JSON.parse(pagePayload),
+          settings
+        );
 
         if (!response.ok) {
           console.warn(

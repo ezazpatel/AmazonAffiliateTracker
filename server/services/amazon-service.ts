@@ -177,7 +177,6 @@ export class AmazonService {
           ItemPage: page,
           Condition: "New",
           SearchIndex: "All",
-          SortBy: "Featured",
           Resources: [
             "BrowseNodeInfo.BrowseNodes",
             "BrowseNodeInfo.BrowseNodes.SalesRank",

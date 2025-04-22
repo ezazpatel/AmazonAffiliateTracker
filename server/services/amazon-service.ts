@@ -169,35 +169,7 @@ export class AmazonService {
       const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
       const dateStamp = amzDate.slice(0, 8);
 
-      // Request payload: retrieve 100 items initially
-      const initialItemCount = 100;
-      const payload = JSON.stringify({
-        Keywords: keyword,
-        Resources: [
-          "BrowseNodeInfo.BrowseNodes",
-          "BrowseNodeInfo.BrowseNodes.SalesRank",
-          "Images.Primary.Large",
-          "ItemInfo.ByLineInfo",
-          "ItemInfo.ContentInfo",
-          "ItemInfo.Features",
-          "ItemInfo.ProductInfo",
-          "ItemInfo.TechnicalInfo",
-          "ItemInfo.Title",
-          "Offers.Listings.Availability.Type",
-          "Offers.Listings.Condition",
-          "Offers.Listings.DeliveryInfo.IsFreeShippingEligible",
-          "Offers.Listings.DeliveryInfo.IsPrimeEligible",
-          "Offers.Listings.IsBuyBoxWinner",
-          "Offers.Listings.Price",
-          "Offers.Listings.Promotions",
-          "ParentASIN",
-          "SearchRefinements"
-        ],
-        PartnerTag: settings.partnerId,
-        PartnerType: "Associates",
-        Marketplace: "www.amazon.com",
-        Operation: "SearchItems"
-      });
+      
 
       // Create request headers based on API specifications
       const algorithm = "AWS4-HMAC-SHA256";

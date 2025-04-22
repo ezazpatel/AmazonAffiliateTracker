@@ -44,8 +44,6 @@ export const products = pgTable("products", {
   description: text("description"),
   imageUrl: text("image_url"),
   affiliateLink: text("affiliate_link").notNull(),
-  rating: real("rating").notNull(), // Corrected: using "real" column type for a float value
-  reviewCount: integer("review_count").notNull(), // Corrected: using integer column type
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

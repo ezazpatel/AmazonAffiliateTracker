@@ -446,7 +446,7 @@ export class AmazonService {
         }
         // Finally by keyword match score
         return b.score - a.score;
-      });
+      })
 
       console.log(`[AmazonService] After filtering: ${eligibleProducts.length} eligible products`);
 
@@ -472,8 +472,9 @@ export class AmazonService {
       } else {
         throw new Error(`Failed to search Amazon products: Unknown error`);
       }
+     }
     }
-
+  
   /**
    * Add products to storage for a specific article.
    */

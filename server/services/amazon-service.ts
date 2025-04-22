@@ -218,15 +218,6 @@ export class AmazonService {
                 .catch((e) => `Failed to read body: ${e}`),
             },
           );
-          console.warn("Request details:", {
-            url,
-            pagePayload: JSON.parse(pagePayload),
-            headers: {
-              ...headers,
-              Authorization: "[masked]",
-              "Content-Length": Buffer.byteLength(pagePayload).toString(),
-            },
-          });
           continue;
         }
 

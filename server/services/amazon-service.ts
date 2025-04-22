@@ -285,7 +285,7 @@ export class AmazonService {
 
       let allItems: any[] = [];
 
-      for (let page = 1; page <= 7; page++) {
+      for (let page = 1; page <= 10; page++) {
         if (page > 1) {
           console.log(`Waiting 1100ms before fetching page ${page}...`);
         }
@@ -295,19 +295,35 @@ export class AmazonService {
           PartnerTag: settings.partnerId,
           PartnerType: "Associates",
           Marketplace: "www.amazon.com",
+          Operation: "SearchItems",
           ItemCount: 10,
           ItemPage: page,
           Condition: "New",
           SearchIndex: "All",
           SortBy: "Featured",
           Resources: [
-            "ItemInfo.Title",
+            "BrowseNodeInfo.BrowseNodes",
+            "BrowseNodeInfo.BrowseNodes.SalesRank",
             "Images.Primary.Large",
             "ItemInfo.ByLineInfo",
-          ],
-        });
+            "ItemInfo.ContentInfo",
+            "ItemInfo.Features",
+            "ItemInfo.ProductInfo",
+            "ItemInfo.TechnicalInfo",
+            "ItemInfo.Title",
+            "Offers.Listings.Availability.Type",
+            "Offers.Listings.Condition",
+            "Offers.Listings.DeliveryInfo.IsFreeShippingEligible",
+            "Offers.Listings.DeliveryInfo.IsPrimeEligible",
+            "Offers.Listings.IsBuyBoxWinner",
+            "Offers.Listings.Price",
+            "Offers.Listings.Promotions",
+            "ParentASIN",
+            "SearchRefinements"
+            ],
+            });
 
-        const payloadHash = crypto
+        const payloadHash = crypto  
           .createHash("sha256")
           .update(pagePayload)
           .digest("hex");
@@ -418,9 +434,7 @@ export class AmazonService {
           console.log(`[AmazonService] Filtered out ${p.asin} - ${reasons.join(', ')}`);
         }
         return isEligible;
-      });
 
-      console.log(`[AmazonService] After filtering: ${eligibleProducts.length} eligible products`);
       }).sort((a, b) => {
         // First by sales rank
         if ((a.salesRank ?? Infinity) !== (b.salesRank ?? Infinity)) {
@@ -433,6 +447,8 @@ export class AmazonService {
         // Finally by keyword match score
         return b.score - a.score;
       });
+
+      console.log(`[AmazonService] After filtering: ${eligibleProducts.length} eligible products`);
 
       console.log(`[AmazonService] Final sort order:`, 
         eligibleProducts.slice(0, 5).map(p => ({
@@ -457,7 +473,6 @@ export class AmazonService {
         throw new Error(`Failed to search Amazon products: Unknown error`);
       }
     }
-  }
 
   /**
    * Add products to storage for a specific article.
@@ -507,6 +522,7 @@ export class AmazonService {
           "BrowseNodeInfo.BrowseNodes.SalesRank",
           "Images.Primary.Large",
           "ItemInfo.ByLineInfo",
+          "ItemInfo.ContentInfo",
           "ItemInfo.Features",
           "ItemInfo.ProductInfo",
           "ItemInfo.TechnicalInfo",
@@ -518,15 +534,7 @@ export class AmazonService {
           "Offers.Listings.IsBuyBoxWinner",
           "Offers.Listings.Price",
           "Offers.Listings.Promotions",
-          "ParentASIN",
-          "OffersV2.Listings.Availability",
-          "OffersV2.Listings.Condition",
-          "OffersV2.Listings.DealDetails",
-          "OffersV2.Listings.IsBuyBoxWinner",
-          "OffersV2.Listings.LoyaltyPoints",
-          "OffersV2.Listings.MerchantInfo",
-          "OffersV2.Listings.Price",
-          "OffersV2.Listings.Type"
+          "ParentASIN"
            ],
            PartnerTag: settings.partnerId,
            PartnerType: "Associates",

@@ -63,10 +63,6 @@ export class AmazonService {
     };
 
     const payloadString = JSON.stringify(payload);
-    const payloadHash = crypto
-      .createHash("sha256")
-      .update(payloadString)
-      .digest("hex");
 
     const canonicalHeaders =
       Object.keys(headers)
@@ -142,7 +138,7 @@ export class AmazonService {
    * 5. Returns the first 5 products.
   
    */
-  
+
   async searchProducts(
     keyword: string,
     count: number = 5,
@@ -169,8 +165,6 @@ export class AmazonService {
       const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
       const dateStamp = amzDate.slice(0, 8);
 
-      
-
       // Create request headers based on API specifications
       const algorithm = "AWS4-HMAC-SHA256";
       const headers: Record<string, string> = {
@@ -190,19 +184,6 @@ export class AmazonService {
           .join("\n") + "\n";
       const signedHeaders = Object.keys(headers).sort().join(";");
 
-      // Create the canonical request
-      const payloadHash = crypto
-        .createHash("sha256")
-        .update(payload)
-        .digest("hex");
-      const canonicalRequest = [
-        "POST",
-        uri,
-        "",
-        canonicalHeaders,
-        signedHeaders,
-        payloadHash,
-      ].join("\n");
 
       // Build the string to sign
       const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
@@ -253,7 +234,7 @@ export class AmazonService {
           2,
         ),
       );
-      console.log(`Request payload: ${payload}`);
+      console.log(`Request payload: ${Payload}`);
 
       let allItems: any[] = [];
 
@@ -291,11 +272,11 @@ export class AmazonService {
             "Offers.Listings.Price",
             "Offers.Listings.Promotions",
             "ParentASIN",
-            "SearchRefinements"
-            ],
-            });
+            "SearchRefinements",
+          ],
+        });
 
-        const payloadHash = crypto  
+        const payloadHash = crypto
           .createHash("sha256")
           .update(pagePayload)
           .digest("hex");
@@ -371,64 +352,84 @@ export class AmazonService {
       const allAsins = allItems.map((item: any) => item.ASIN);
       const enrichedProducts = await this.getItemsDetails(allAsins);
 
-      console.log(`[AmazonService] Starting with ${enrichedProducts.length} products`);
-      
+      console.log(
+        `[AmazonService] Starting with ${enrichedProducts.length} products`,
+      );
+
       // Now score and filter with complete data
       const productsWithScores = enrichedProducts
-      .filter((p) => {
-        const isValid = p.title && p.affiliateLink;
-        if (!isValid) console.log(`[AmazonService] Filtered out - Missing title/link: ${p.asin}`);
-        return isValid;
-      })
-      .map((product) => ({
-        ...product,
-        score: this.scoreProduct(product, keyword),
-        isMain: this.isMainProduct(product, keyword),
-        isBuyBoxWinner: product.isBuyBoxWinner ?? false,
-        isPrimeEligible: product.isPrimeEligible ?? false,
-        condition: product.condition?.toLowerCase() ?? '',
-        salesRank: product.salesRank ?? Infinity
-      }));
+        .filter((p) => {
+          const isValid = p.title && p.affiliateLink;
+          if (!isValid)
+            console.log(
+              `[AmazonService] Filtered out - Missing title/link: ${p.asin}`,
+            );
+          return isValid;
+        })
+        .map((product) => ({
+          ...product,
+          score: this.scoreProduct(product, keyword),
+          isMain: this.isMainProduct(product, keyword),
+          isBuyBoxWinner: product.isBuyBoxWinner ?? false,
+          isPrimeEligible: product.isPrimeEligible ?? false,
+          condition: product.condition?.toLowerCase() ?? "",
+          salesRank: product.salesRank ?? Infinity,
+        }));
 
-      console.log(`[AmazonService] After scoring: ${productsWithScores.length} products`);
-      
-      const eligibleProducts = productsWithScores.filter(p => {
-        const reasons = [];
-        if (p.score === 0) reasons.push('score=0');
-        if (!p.isMain) reasons.push('not main product');
-        if (!p.isBuyBoxWinner) reasons.push('not buy box winner');
-        if (p.condition?.toLowerCase() !== 'new') reasons.push('not new condition');
-        if (typeof p.salesRank !== "number" || p.salesRank >= 10000) reasons.push(`invalid rank: ${p.salesRank}`);
-        if (!["NOW", "IN_STOCK"].includes((p.availabilityType ?? "").toUpperCase())) reasons.push(`invalid availability: ${p.availabilityType}`);
-        
-        const isEligible = reasons.length === 0;
-        if (!isEligible) {
-          console.log(`[AmazonService] Filtered out ${p.asin} - ${reasons.join(', ')}`);
-        }
-        return isEligible;
+      console.log(
+        `[AmazonService] After scoring: ${productsWithScores.length} products`,
+      );
 
-      }).sort((a, b) => {
-        // First by sales rank
-        if ((a.salesRank ?? Infinity) !== (b.salesRank ?? Infinity)) {
-          return (a.salesRank ?? Infinity) - (b.salesRank ?? Infinity);
-        }
-        // Then by Prime eligibility
-        if (b.isPrimeEligible !== a.isPrimeEligible) {
-          return b.isPrimeEligible ? 1 : -1;
-        }
-        // Finally by keyword match score
-        return b.score - a.score;
-      })
+      const eligibleProducts = productsWithScores
+        .filter((p) => {
+          const reasons = [];
+          if (p.score === 0) reasons.push("score=0");
+          if (!p.isMain) reasons.push("not main product");
+          if (!p.isBuyBoxWinner) reasons.push("not buy box winner");
+          if (p.condition?.toLowerCase() !== "new")
+            reasons.push("not new condition");
+          if (typeof p.salesRank !== "number" || p.salesRank >= 10000)
+            reasons.push(`invalid rank: ${p.salesRank}`);
+          if (
+            !["NOW", "IN_STOCK"].includes(
+              (p.availabilityType ?? "").toUpperCase(),
+            )
+          )
+            reasons.push(`invalid availability: ${p.availabilityType}`);
 
-      console.log(`[AmazonService] After filtering: ${eligibleProducts.length} eligible products`);
+          const isEligible = reasons.length === 0;
+          if (!isEligible) {
+            console.log(
+              `[AmazonService] Filtered out ${p.asin} - ${reasons.join(", ")}`,
+            );
+          }
+          return isEligible;
+        })
+        .sort((a, b) => {
+          // First by sales rank
+          if ((a.salesRank ?? Infinity) !== (b.salesRank ?? Infinity)) {
+            return (a.salesRank ?? Infinity) - (b.salesRank ?? Infinity);
+          }
+          // Then by Prime eligibility
+          if (b.isPrimeEligible !== a.isPrimeEligible) {
+            return b.isPrimeEligible ? 1 : -1;
+          }
+          // Finally by keyword match score
+          return b.score - a.score;
+        });
 
-      console.log(`[AmazonService] Final sort order:`, 
-        eligibleProducts.slice(0, 5).map(p => ({
+      console.log(
+        `[AmazonService] After filtering: ${eligibleProducts.length} eligible products`,
+      );
+
+      console.log(
+        `[AmazonService] Final sort order:`,
+        eligibleProducts.slice(0, 5).map((p) => ({
           asin: p.asin,
           salesRank: p.salesRank,
           isPrime: p.isPrimeEligible,
-          score: p.score
-        }))
+          score: p.score,
+        })),
       );
 
       const topProducts = eligibleProducts.slice(0, count);
@@ -444,9 +445,9 @@ export class AmazonService {
       } else {
         throw new Error(`Failed to search Amazon products: Unknown error`);
       }
-     }
     }
-  
+  }
+
   /**
    * Add products to storage for a specific article.
    */
@@ -507,13 +508,13 @@ export class AmazonService {
           "Offers.Listings.IsBuyBoxWinner",
           "Offers.Listings.Price",
           "Offers.Listings.Promotions",
-          "ParentASIN"
-           ],
-           PartnerTag: settings.partnerId,
-           PartnerType: "Associates",
-           Marketplace: "www.amazon.com",
-           Operation: "GetItems"
-          };
+          "ParentASIN",
+        ],
+        PartnerTag: settings.partnerId,
+        PartnerType: "Associates",
+        Marketplace: "www.amazon.com",
+        Operation: "GetItems",
+      };
 
       try {
         const response = await this.signedAmazonRequest(
@@ -527,7 +528,7 @@ export class AmazonService {
           console.error(
             `❌ Failed for batch with status ${response.status}:`,
             errorText,
-            batchAsins
+            batchAsins,
           );
           continue;
         }
@@ -541,7 +542,9 @@ export class AmazonService {
           results.push({
             asin: item.ASIN,
             title: item.ItemInfo?.Title?.DisplayValue,
-            description: (item.ItemInfo?.Features?.DisplayValues ?? []).join("; "),
+            description: (item.ItemInfo?.Features?.DisplayValues ?? []).join(
+              "; ",
+            ),
             imageUrl: item.Images?.Primary?.Large?.URL,
             price: offer?.Price?.Money?.DisplayAmount,
             isBuyBoxWinner: offer?.IsBuyBoxWinner ?? false,
@@ -559,9 +562,9 @@ export class AmazonService {
       if (i + batchSize < asins.length) {
         await new Promise((resolve) => setTimeout(resolve, 1100));
       }
-        }
-        return results;
-      }
+    }
+    return results;
+  }
 
   /**
    * Calculate a score for how closely a product title matches the keyword.

@@ -67,7 +67,7 @@ export class WordPressService {
         },
         body: JSON.stringify({
           title: article.title,
-          content: article.content,
+          content: article.content.replace(/<h1>.*?<\/h1>\s*/, ''), // Remove H1 title
           status: 'publish'
         })
       });

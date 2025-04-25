@@ -253,8 +253,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Articles
   app.post("/api/articles/:id/publish", async (req, res) => {
   try {
+    console.log('[PublishEndpoint] Received publish request for article:', req.params.id);
+    
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
+      console.error('[PublishEndpoint] Invalid article ID:', req.params.id);
       return res.status(400).json({ message: "Invalid article ID" });
     }
 

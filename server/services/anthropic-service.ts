@@ -395,7 +395,6 @@ export class AnthropicService {
       Product facts:
       ASIN: ${product.asin}
       Price: ${product.price ?? "N/A"}
-      Rating: ${product.rating ?? "N/A"} (${product.reviewCount ?? 0} reviews)
       Key features: ${product.description}
 
       Subheadings:
@@ -420,7 +419,7 @@ export class AnthropicService {
             productContent += "</ul>";
           }
 
-          fullContent += `${ratingBlock}\n${productContent}\n\n`;
+        fullContent += `${productContent}\n\n`;
         }
 
         // === Wrap-Up Section ===

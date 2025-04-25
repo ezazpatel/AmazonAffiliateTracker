@@ -15,6 +15,7 @@ const STYLE_GUIDELINES = `
 - Begin the response with the required HTML tag (e.g., <h2>, <p>) and the actual content, with **no pre‑amble or meta commentary** like 'This post', or 'Here's the review'
 - Do NOT use "Hey There" or similar greetings
 - Do NOT mention yourself or the writing process
+- Never mention checking prices or affiliate links in the content
 - Keep emoji usage minimal - only if absolutely necessary
 - Include the main keyword naturally - does not have to be exact phrase but needs to meet the search intent of the user`;
 
@@ -380,7 +381,8 @@ export class AnthropicService {
 
       Provide:
       - Use this heading: <h2><a href="${product.affiliateLink}" target="_blank" rel="nofollow">${product.title}</a></h2>
-      - Price: ${product.price ?? "N/A"}
+      - Below heading add: <div class="price-button"><a href="${product.affiliateLink}" target="_blank" rel="nofollow" class="amazon-button">Check Price on Amazon</a></div>
+      - Never mention checking prices or affiliate links in the content
       - ${imageInstruction}
       - Relevant <h3> sub‑sections
       - Use <ul> for 3‑5 quick‑hit pros

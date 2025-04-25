@@ -1,4 +1,3 @@
-
 import fetch from 'node-fetch';
 import { storage } from '../storage';
 
@@ -7,7 +6,7 @@ export class WordPressService {
     try {
       const { wpBaseUrl, username, password } = this.getCredentials();
       const auth = Buffer.from(`${username}:${password}`).toString('base64');
-      
+
       const response = await fetch(`${wpBaseUrl}/wp-json/wp/v2/users/me`, {
         headers: {
           'Authorization': `Basic ${auth}`
@@ -45,7 +44,7 @@ export class WordPressService {
 
   async publishArticle(articleId: number) {
     console.log('[WordPressService] Starting article publish:', articleId);
-    
+
     const article = await storage.getArticle(articleId);
     if (!article) {
       console.error('[WordPressService] Article not found:', articleId);
@@ -55,9 +54,9 @@ export class WordPressService {
 
     const { wpBaseUrl, username, password } = this.getCredentials();
     const auth = Buffer.from(`${username}:${password}`).toString('base64');
-    
+
     console.log('[WordPressService] Sending request to WordPress:', wpBaseUrl);
-    
+
     try {
       const response = await fetch(`${wpBaseUrl}/wp-json/wp/v2/posts`, {
         method: 'POST',
@@ -81,7 +80,7 @@ export class WordPressService {
         });
         throw new Error(`Failed to publish to WordPress: ${response.statusText} - ${errorText}`);
       }
-      
+
       const result = await response.json();
       console.log('[WordPressService] Successfully published to WordPress:', result);
 
@@ -90,11 +89,11 @@ export class WordPressService {
         const products = await storage.getProductsByArticleId(articleId);
         if (products.length > 0) {
           const { default: sharp } = await import('sharp');
-          
+
           // Download images and create buffers
           const validProducts = products.filter(p => p.imageUrl);
           console.log('[WordPressService] Processing images for products:', validProducts.length);
-          
+
           if (validProducts.length === 0) {
             console.log('[WordPressService] No valid product images found, skipping featured image');
             return result;
@@ -118,7 +117,7 @@ export class WordPressService {
 
           // Filter out any null buffers from failed downloads
           const validBuffers = imageBuffers.filter(buffer => buffer !== null);
-          
+
           if (validBuffers.length === 0) {
             console.log('[WordPressService] No valid image buffers, skipping featured image');
             return result;
@@ -163,7 +162,7 @@ export class WordPressService {
 
           if (imageUploadResponse.ok) {
             const imageData = await imageUploadResponse.json();
-            
+
             // Set as featured image
             await fetch(`${wpBaseUrl}/wp-json/wp/v2/posts/${result.id}`, {
               method: 'POST',

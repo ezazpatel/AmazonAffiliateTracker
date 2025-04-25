@@ -169,17 +169,19 @@ export class AnthropicService {
 
         You will NOT write any article content yet.
 
-      Use ONLY these specific Amazon products in your article:
+      The outline MUST use these exact Amazon products as the main H2 sections, in this order:
       ${affiliateLinks.map((p) => `- ${p.title} (ASIN: ${p.asin})`).join("\n")}
 
-      Each section in the "outline" array must use the ASIN for 'affiliate_connection' instead of the product title.
+      Each section MUST correspond to one product, maintaining the exact order above.
+      Each section in the "outline" array must use the ASIN for 'affiliate_connection' corresponding to that product.
 
       Instructions:
       ${STYLE_GUIDELINES}
       - Create a strong SEO-friendly title for the post (aim for 60–70 characters) that includes the main keyword(s) naturally.
       - DO NOT include any <h2>, <p>, or HTML tags
       - DO NOT generate the full article — JUST return the outline
-      - The product sections must be tied to one of the exact products listed above
+      - Create exactly ${affiliateLinks.length} sections, one for each product above, in the same order
+      - Add 2-3 relevant subheadings under each product section
 
       // …
       Format your response as JSON:

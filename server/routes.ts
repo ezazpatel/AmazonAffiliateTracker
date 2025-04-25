@@ -8,6 +8,7 @@ import csvParser from "csv-parser";
 import { Readable } from "stream";
 import { contentGenerator } from "./services/content-generator";
 import { scheduler } from "./services/scheduler";
+import { wordpressService } from "./services/wordpress-service";
 
 // Set up multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });

@@ -89,7 +89,7 @@ export class WordPressService {
       try {
         const products = await storage.getProductsByArticleId(articleId);
         if (products.length > 0) {
-          const sharp = require('sharp');
+          const { default: sharp } = await import('sharp');
           
           // Download images and create buffers
           const validProducts = products.filter(p => p.imageUrl);

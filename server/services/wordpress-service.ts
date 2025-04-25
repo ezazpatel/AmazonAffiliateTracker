@@ -82,10 +82,15 @@ export class WordPressService {
         throw new Error(`Failed to publish to WordPress: ${response.statusText} - ${errorText}`);
       }
       
-      console.log('[WordPressService] Successfully published to WordPress');
+      const result = await response.json();
+      console.log('[WordPressService] Successfully published to WordPress:', result);
 
-    await storage.updateArticleStatus(articleId, 'published');
-    return response.json();
+      await storage.updateArticleStatus(articleId, 'published');
+      return result;
+    } catch (error) {
+      console.error('[WordPressService] Publishing failed:', error);
+      throw error;
+    }
   }
 }
 

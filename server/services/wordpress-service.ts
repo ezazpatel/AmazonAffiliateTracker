@@ -3,23 +3,26 @@ import fetch from 'node-fetch';
 import { storage } from '../storage';
 
 export class WordPressService {
-  private wpBaseUrl: string = '';
-  private username: string = '';
-  private password: string = '';
+  private getCredentials() {
+    const wpBaseUrl = process.env.WP_BASE_URL;
+    const username = process.env.WP_USERNAME;
+    const password = process.env.WP_PASSWORD;
 
-  async configure(settings: {wpBaseUrl: string, username: string, password: string}) {
-    this.wpBaseUrl = settings.wpBaseUrl;
-    this.username = settings.username;
-    this.password = settings.password;
+    if (!wpBaseUrl || !username || !password) {
+      throw new Error('WordPress credentials not configured in environment variables');
+    }
+
+    return { wpBaseUrl, username, password };
   }
 
   async publishArticle(articleId: number) {
     const article = await storage.getArticle(articleId);
     if (!article) throw new Error('Article not found');
 
-    const auth = Buffer.from(`${this.username}:${this.password}`).toString('base64');
+    const { wpBaseUrl, username, password } = this.getCredentials();
+    const auth = Buffer.from(`${username}:${password}`).toString('base64');
     
-    const response = await fetch(`${this.wpBaseUrl}/wp-json/wp/v2/posts`, {
+    const response = await fetch(`${wpBaseUrl}/wp-json/wp/v2/posts`, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${auth}`,

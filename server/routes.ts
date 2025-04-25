@@ -244,16 +244,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Invalid article ID" });
     }
 
-    const settings = await storage.getApiSettings();
-    if (!settings?.wpBaseUrl || !settings?.wpUsername || !settings?.wpPassword) {
-      return res.status(400).json({ message: "WordPress credentials not configured" });
+    if (!process.env.WP_BASE_URL || !process.env.WP_USERNAME || !process.env.WP_PASSWORD) {
+      return res.status(400).json({ message: "WordPress credentials not configured in environment variables" });
     }
-
-    await wordpressService.configure({
-      wpBaseUrl: settings.wpBaseUrl,
-      username: settings.wpUsername,
-      password: settings.wpPassword
-    });
 
     const result = await wordpressService.publishArticle(id);
     res.json({ success: true, wordpressId: result.id });

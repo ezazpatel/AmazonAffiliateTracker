@@ -11,3 +11,26 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+.amazon-button {
+  display: inline-block;
+  background-color: #FFD814;
+  border: 1px solid #FCD200;
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: #0F1111;
+  font-weight: 500;
+  text-decoration: none;
+  margin: 10px 0;
+  transition: all 0.2s;
+}
+
+.amazon-button:hover {
+  background-color: #F7CA00;
+  border-color: #F2C200;
+}
+
+.price-button {
+  margin: 15px 0;
+  text-align: left;
+}

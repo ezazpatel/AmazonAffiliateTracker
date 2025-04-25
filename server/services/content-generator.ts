@@ -1,5 +1,6 @@
 import { amazonService } from "./amazon-service";
 import { anthropicService } from "./anthropic-service";
+import { wordpressService } from "./wordpress-service";
 import { storage } from "../storage";
 import { type Keyword, type InsertArticle } from "@shared/schema";
 

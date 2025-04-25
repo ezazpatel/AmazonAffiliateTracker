@@ -86,17 +86,43 @@ export class WordPressService {
       console.log('[WordPressService] Successfully published to WordPress:', result);
 
       // Get product images
-      const products = await storage.getProductsForArticle(articleId);
-      if (products.length > 0) {
-        const sharp = require('sharp');
-        
-        // Download images and create buffers
-        const imageBuffers = await Promise.all(
-          products.slice(0, 4).map(async (product) => {
-            const response = await fetch(product.imageUrl);
-            return response.arrayBuffer();
-          })
-        );
+      try {
+        const products = await storage.getProductsForArticle(articleId);
+        if (products.length > 0) {
+          const sharp = require('sharp');
+          
+          // Download images and create buffers
+          const validProducts = products.filter(p => p.imageUrl);
+          console.log('[WordPressService] Processing images for products:', validProducts.length);
+          
+          if (validProducts.length === 0) {
+            console.log('[WordPressService] No valid product images found, skipping featured image');
+            return result;
+          }
+
+          const imageBuffers = await Promise.all(
+            validProducts.slice(0, 4).map(async (product) => {
+              try {
+                const response = await fetch(product.imageUrl);
+                if (!response.ok) {
+                  console.error(`[WordPressService] Failed to fetch image: ${product.imageUrl}`);
+                  return null;
+                }
+                return response.arrayBuffer();
+              } catch (error) {
+                console.error(`[WordPressService] Error downloading image: ${error}`);
+                return null;
+              }
+            })
+          );
+
+          // Filter out any null buffers from failed downloads
+          const validBuffers = imageBuffers.filter(buffer => buffer !== null);
+          
+          if (validBuffers.length === 0) {
+            console.log('[WordPressService] No valid image buffers, skipping featured image');
+            return result;
+          }
 
         // Calculate dimensions for 2x2 grid
         const width = 1200;

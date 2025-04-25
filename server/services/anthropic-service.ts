@@ -307,13 +307,14 @@ export class AnthropicService {
             affiliateLinksHTML =
               `<div class="product-links">\n` +
               `<h2>Our Top Picks for the Year (2025)</h2>\n` +
+              `<ul>\n` +
               validAffiliateLinks
                 .map(
                   (link) =>
-                    `<p><a href="${link.affiliateLink}" target="_blank" rel="nofollow">${link.title}</a></p>`,
+                    `  <li><a href="${link.affiliateLink}" target="_blank" rel="nofollow">${link.title}</a></li>`,
                 )
                 .join("\n") +
-              `\n</div>`;
+              `\n</ul>\n</div>`;
           }
         }
         const firstHeading =

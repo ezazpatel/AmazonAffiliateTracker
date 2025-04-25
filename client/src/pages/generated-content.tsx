@@ -45,7 +45,8 @@ import {
   AlertCircle, 
   FileText,
   CheckCircle,
-  Clock 
+  Clock,
+  Upload
 } from "lucide-react";
 import { type Article } from "@shared/schema";
 
@@ -200,6 +201,29 @@ export default function GeneratedContent() {
                             >
                               <Download className="h-4 w-4" />
                             </Button>
+                            {article.status !== 'published' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    const response = await fetch(`/api/articles/${article.id}/publish`, {
+                                      method: 'POST'
+                                    });
+                                    if (!response.ok) {
+                                      throw new Error('Failed to publish');
+                                    }
+                                    // Refetch the articles list
+                                    window.location.reload();
+                                  } catch (error) {
+                                    console.error('Publish error:', error);
+                                    alert('Failed to publish article to WordPress. Please check your WordPress credentials.');
+                                  }
+                                }}
+                              >
+                                <Upload className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

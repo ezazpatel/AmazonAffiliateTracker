@@ -16,6 +16,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize the scheduler
   scheduler.init();
 
+  // Test WordPress connection
+  app.get('/api/wordpress/test', async (req, res) => {
+    try {
+      const result = await wordpressService.testConnection();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Connection test failed' 
+      });
+    }
+  });
+
   // API Routes
   app.get("/api/dashboard/stats", async (req, res) => {
     try {

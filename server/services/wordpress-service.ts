@@ -3,6 +3,34 @@ import fetch from 'node-fetch';
 import { storage } from '../storage';
 
 export class WordPressService {
+  async testConnection(): Promise<{ success: boolean; message: string }> {
+    try {
+      const { wpBaseUrl, username, password } = this.getCredentials();
+      const auth = Buffer.from(`${username}:${password}`).toString('base64');
+      
+      const response = await fetch(`${wpBaseUrl}/wp-json/wp/v2/users/me`, {
+        headers: {
+          'Authorization': `Basic ${auth}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to connect to WordPress');
+      }
+
+      const data = await response.json();
+      return { 
+        success: true, 
+        message: `Connected successfully as ${data.name}` 
+      };
+    } catch (error) {
+      return { 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Connection failed' 
+      };
+    }
+  }
+
   private getCredentials() {
     const wpBaseUrl = process.env.WP_BASE_URL;
     const username = process.env.WP_USERNAME;

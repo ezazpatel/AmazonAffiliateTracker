@@ -13,6 +13,27 @@ export default function Dashboard() {
     queryKey: ['/api/dashboard/stats'],
   });
 
+  const wpConnection = useQuery({
+    queryKey: ['wordpress-connection'],
+    queryFn: async () => {
+      const response = await fetch('/api/wordpress/test');
+      return response.json();
+    }
+  });
+
+  // Show WordPress connection status alert if there's an issue
+  if (wpConnection.data && !wpConnection.data.success) {
+    return (
+      <Alert variant="destructive" className="mb-8">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>WordPress Connection Error</AlertTitle>
+        <AlertDescription>
+          {wpConnection.data.message}. Please check your WordPress credentials in environment variables.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   let statCards;
 
   if (isLoading) {

@@ -10,6 +10,7 @@ interface ArticleContent {
 
 const STYLE_GUIDELINES = `
 - Use varied sentence lengths to mimic human writing - mostly short sentences followed by a long sentence to drive home the point
+- The current year is 2025
 - Use grade 6 level Canadian English
 - Keep a warm, friendly, and conversational tone
 - Begin the response with the required HTML tag (e.g., <h2>, <p>) and the actual content, with **no pre‑amble or meta commentary** like 'This post', or 'Here's the review'
@@ -241,7 +242,7 @@ export class AnthropicService {
             );
           }
 
-          // 🧠 Handle if outline is wrapped under `content.outline`
+          //  a�� Handle if outline is wrapped under `content.outline`
           if (outlineResult.content?.outline) {
             outlineResult = {
               title: outlineResult.title,
@@ -417,7 +418,7 @@ export class AnthropicService {
           // inject it right after the H2
           productContent = productContent.replace(
             /(<h2>[\s\S]*?<\/h2>)/,
-            `$1\n${priceHtml}`
+            `$1\n${priceHtml}`,
           );
 
           // Safety: close <ul> if Claude forgot
@@ -428,7 +429,7 @@ export class AnthropicService {
             productContent += "</ul>";
           }
 
-        fullContent += `${productContent}\n\n`;
+          fullContent += `${productContent}\n\n`;
         }
 
         // === Wrap-Up Section ===
@@ -457,7 +458,7 @@ export class AnthropicService {
         const faqPrompt = `Write 5 detailed FAQs related to "${outlineResult.title}".
         Each FAQ should use <h3> for the question and <p> for the answer.
         Instructions:
-        ${STYLE_GUIDELINES }
+        ${STYLE_GUIDELINES}
         - Format using plain HTML only – no markdown.
         - Begin the response with the required HTML tag (e.g., <h3>) and the actual content, with **no pre‑amble or meta commentary**.`;
 

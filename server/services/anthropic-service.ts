@@ -279,7 +279,7 @@ export class AnthropicService {
           };
         }
 
-        const excerptPrompt = `In an engaging, informative, knowledgeable, and conversational tone write a catchy, 1-2 sentence excerpt for a blog post titled "${outlineResult.title}" that entices readers to continue reading.
+        const excerptPrompt = `Write a catchy, 1-2 sentence excerpt for a blog post titled "${outlineResult.title}".
           
           Instructions:
           ${STYLE_GUIDELINES}`;
@@ -378,8 +378,9 @@ export class AnthropicService {
 
       Provide:
       - Use this heading: <h2><a href="${product.affiliateLink}" target="_blank" rel="nofollow">${product.title}</a></h2>
+      - Price: ${product.price ?? "N/A"}
       - ${imageInstruction}
-      - 2-3 <h3> sub‑sections
+      - Relevant <h3> sub‑sections
       - Use <ul> for 3‑5 quick‑hit pros
 
       INSTRUCTIONS:

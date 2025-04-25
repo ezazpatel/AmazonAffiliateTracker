@@ -92,7 +92,16 @@ export class ContentGenerator {
       // Step 6: Update keyword status
       await storage.updateKeywordStatus(keyword.id, "completed");
 
-      // Step 7: Log activity
+      // Step 7: Publish to WordPress
+      try {
+        console.log(`[ContentGenerator] Publishing article to WordPress...`);
+        await wordpressService.publishArticle(article.id);
+        console.log(`[ContentGenerator] Successfully published to WordPress`);
+      } catch (error) {
+        console.error(`[ContentGenerator] WordPress publish failed:`, error);
+      }
+
+      // Step 8: Log activity
       await storage.addActivity({
         activityType: "article_generated",
         message: `Article "${articleContent.title}" was successfully generated for keyword "${keyword.primaryKeyword}"`,

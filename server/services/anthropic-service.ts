@@ -383,7 +383,7 @@ export class AnthropicService {
 
       Provide:
       - Use this heading: <h2><a href="${product.affiliateLink}" target="_blank" rel="nofollow">${product.title}</a></h2>
-      - Below heading add: <a href="${product.affiliateLink}" target="_blank" rel="nofollow" class="amazon-button">Check Price on Amazon</a>
+      - Below heading add: <div class="price-button"><a href="${product.affiliateLink}" target="_blank" rel="nofollow" class="amazon-button">Check Amazon Price</a></div>
       - Never mention checking prices or affiliate links in the content
       - ${imageInstruction}
       - Relevant <h3> sub‑sections

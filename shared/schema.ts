@@ -1,4 +1,3 @@
-
 import { integer, pgTable, serial, text, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
@@ -112,6 +111,9 @@ export const apiSettings = pgTable("api_settings", {
   anthropicApiKey: text("anthropic_api_key"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  wpBaseUrl: text("wp_base_url"),
+  wpUsername: text("wp_username"),
+  wpPassword: text("wp_password"),
 });
 
 export const insertApiSettingsSchema = createInsertSchema(apiSettings).omit({

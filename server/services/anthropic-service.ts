@@ -9,6 +9,7 @@ interface ArticleContent {
 }
 
 const STYLE_GUIDELINES = `
+- Use varied sentence lengths to mimic human writing - mostly short sentences followed by a long sentence to drive home the point
 - Use grade 6 level Canadian English
 - Keep a warm, friendly, and conversational tone
 - Begin the response with the required HTML tag (e.g., <h2>, <p>) and the actual content, with **no pre‑amble or meta commentary** like 'This post', or 'Here's the review'
@@ -315,14 +316,10 @@ export class AnthropicService {
           outlineResult.outline?.[0]?.heading ?? "First Section";
 
         const introPrompt = `Write an engaging introduction for "${outlineResult.title}".
-        
-      Include:
-      - A hook that grabs attention
-      - Brief mention of key benefits readers will get
-      - Natural transition to the first section: "${firstHeading}"
       
       Instructions:
       ${STYLE_GUIDELINES}
+      - Natural transition to the first section: "${firstHeading}"
 
       Important: End at the previous sentence. Do NOT leave content hanging.
       Format with <p> tags only.`;
@@ -375,22 +372,19 @@ export class AnthropicService {
             hasAffiliate: !!product.affiliateLink,
           });
 
-          const productPrompt = `Write a detailed product review for "${product.title}" in a simple, informative, and conversational tone.
+          const productPrompt = `Write a detailed product review for "${product.title}".
 
         Use ${product.description} to understand what the product does and what are the features and other details. Then use this information to write the review. Explain how each key feature BENEFITS the reader – don’t just list specs
 
       Provide:
       - Use this heading: <h2><a href="${product.affiliateLink}" target="_blank" rel="nofollow">${product.title}</a></h2>
-      - A short price mention (e.g., "Around ${product.price}") if price is available
       - ${imageInstruction}
-      - Two <h3> sub‑sections:
-        1. "Why It’s Useful" – 120‑150 words focused on real‑world benefits
-        2. "Good to Know" – 80‑120 words on limitations, best‑use tips, or installation notes
+      - 2-3 <h3> sub‑sections
       - Use <ul> for 3‑5 quick‑hit pros
 
       INSTRUCTIONS:
-      - Every section MUST include an 'affiliate_connection' from the ASIN list. If a section idea does not relate directly to a product, SKIP it.
       ${STYLE_GUIDELINES}
+      - Every section MUST include an 'affiliate_connection' from the ASIN list. If a section idea does not relate directly to a product, SKIP it.
 
       Product facts:
       ASIN: ${product.asin}
@@ -411,6 +405,16 @@ export class AnthropicService {
             this.extractTextContent(productResponse),
           );
 
+          // insert price under the <h2> title
+          const priceHtml = product.price
+            ? `<p><strong>Price:</strong> ${product.price}</p>`
+            : "";
+          // inject it right after the H2
+          productContent = productContent.replace(
+            /(<h2>[\s\S]*?<\/h2>)/,
+            `$1\n${priceHtml}`
+          );
+
           // Safety: close <ul> if Claude forgot
           if (
             productContent.includes("<ul>") &&
@@ -425,10 +429,11 @@ export class AnthropicService {
         // === Wrap-Up Section ===
 
         const wrapPrompt = `Write a wrap-up section for the blog post titled "${outlineResult.title}".
+        
         Instructions:
+        ${STYLE_GUIDELINES}
         - Summarize key insights for the exact products from the product sections
-        - Encourage the reader to take action and choose confidently
-        ${STYLE_GUIDELINES}`;
+        - Encourage the reader to take action and choose confidently`;
 
         const wrapResponse = await client.messages.create({
           model: ANTHROPIC_MODEL,
@@ -446,8 +451,10 @@ export class AnthropicService {
 
         const faqPrompt = `Write 5 detailed FAQs related to "${outlineResult.title}".
         Each FAQ should use <h3> for the question and <p> for the answer.
-        Format using plain HTML only – no markdown.
-        Begin the response with the required HTML tag (e.g., <h3>) and the actual content, with **no pre‑amble or meta commentary**.`;
+        Instructions:
+        ${STYLE_GUIDELINES }
+        - Format using plain HTML only – no markdown.
+        - Begin the response with the required HTML tag (e.g., <h3>) and the actual content, with **no pre‑amble or meta commentary**.`;
 
         const faqResponse = await client.messages.create({
           model: ANTHROPIC_MODEL,

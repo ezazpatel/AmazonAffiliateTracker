@@ -85,6 +85,73 @@ export class WordPressService {
       const result = await response.json();
       console.log('[WordPressService] Successfully published to WordPress:', result);
 
+      // Get product images
+      const products = await storage.getProductsForArticle(articleId);
+      if (products.length > 0) {
+        const sharp = require('sharp');
+        
+        // Download images and create buffers
+        const imageBuffers = await Promise.all(
+          products.slice(0, 4).map(async (product) => {
+            const response = await fetch(product.imageUrl);
+            return response.arrayBuffer();
+          })
+        );
+
+        // Calculate dimensions for 2x2 grid
+        const width = 1200;
+        const height = 630;
+        const cellWidth = width / 2;
+        const cellHeight = height / 2;
+
+        // Create composite image
+        const composite = await sharp({
+          create: {
+            width,
+            height,
+            channels: 4,
+            background: { r: 255, g: 255, b: 255, alpha: 1 }
+          }
+        })
+        .composite(
+          imageBuffers.map((buffer, i) => ({
+            input: buffer,
+            top: Math.floor(i / 2) * cellHeight,
+            left: (i % 2) * cellWidth,
+            gravity: 'northwest'
+          }))
+        )
+        .jpeg()
+        .toBuffer();
+
+        // Upload composite as featured image
+        const imageUploadResponse = await fetch(`${wpBaseUrl}/wp-json/wp/v2/media`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'image/jpeg',
+            'Content-Disposition': 'attachment; filename=header.jpg'
+          },
+          body: composite
+        });
+
+        if (imageUploadResponse.ok) {
+          const imageData = await imageUploadResponse.json();
+          
+          // Set as featured image
+          await fetch(`${wpBaseUrl}/wp-json/wp/v2/posts/${result.id}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Basic ${auth}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              featured_media: imageData.id
+            })
+          });
+        }
+      }
+
       await storage.updateArticleStatus(articleId, 'published');
       return result;
     } catch (error) {

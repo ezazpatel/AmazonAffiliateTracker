@@ -124,58 +124,61 @@ export class WordPressService {
             return result;
           }
 
-        // Calculate dimensions for 2x2 grid
-        const width = 1200;
-        const height = 630;
-        const cellWidth = width / 2;
-        const cellHeight = height / 2;
+          // Calculate dimensions for 2x2 grid
+          const width = 1200;
+          const height = 630;
+          const cellWidth = width / 2;
+          const cellHeight = height / 2;
 
-        // Create composite image
-        const composite = await sharp({
-          create: {
-            width,
-            height,
-            channels: 4,
-            background: { r: 255, g: 255, b: 255, alpha: 1 }
-          }
-        })
-        .composite(
-          imageBuffers.map((buffer, i) => ({
-            input: buffer,
-            top: Math.floor(i / 2) * cellHeight,
-            left: (i % 2) * cellWidth,
-            gravity: 'northwest'
-          }))
-        )
-        .jpeg()
-        .toBuffer();
+          // Create composite image
+          const composite = await sharp({
+            create: {
+              width,
+              height,
+              channels: 4,
+              background: { r: 255, g: 255, b: 255, alpha: 1 }
+            }
+          })
+          .composite(
+            imageBuffers.map((buffer, i) => ({
+              input: buffer,
+              top: Math.floor(i / 2) * cellHeight,
+              left: (i % 2) * cellWidth,
+              gravity: 'northwest'
+            }))
+          )
+          .jpeg()
+          .toBuffer();
 
-        // Upload composite as featured image
-        const imageUploadResponse = await fetch(`${wpBaseUrl}/wp-json/wp/v2/media`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Basic ${auth}`,
-            'Content-Type': 'image/jpeg',
-            'Content-Disposition': 'attachment; filename=header.jpg'
-          },
-          body: composite
-        });
-
-        if (imageUploadResponse.ok) {
-          const imageData = await imageUploadResponse.json();
-          
-          // Set as featured image
-          await fetch(`${wpBaseUrl}/wp-json/wp/v2/posts/${result.id}`, {
+          // Upload composite as featured image
+          const imageUploadResponse = await fetch(`${wpBaseUrl}/wp-json/wp/v2/media`, {
             method: 'POST',
             headers: {
               'Authorization': `Basic ${auth}`,
-              'Content-Type': 'application/json'
+              'Content-Type': 'image/jpeg',
+              'Content-Disposition': 'attachment; filename=header.jpg'
             },
-            body: JSON.stringify({
-              featured_media: imageData.id
-            })
+            body: composite
           });
+
+          if (imageUploadResponse.ok) {
+            const imageData = await imageUploadResponse.json();
+            
+            // Set as featured image
+            await fetch(`${wpBaseUrl}/wp-json/wp/v2/posts/${result.id}`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Basic ${auth}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                featured_media: imageData.id
+              })
+            });
+          }
         }
+      } catch (error) {
+        console.error('[WordPressService] Error processing featured image:', error);
       }
 
       await storage.updateArticleStatus(articleId, 'published');

@@ -234,6 +234,12 @@ export class DatabaseStorage implements IStorage {
     
     return count;
   }
+
+  async updateArticleStatus(id: number, status: string): Promise<void> {
+    await db.update(articles)
+      .set({ status })
+      .where(eq(articles.id, id));
+  }
   
   // Products
   async getProduct(id: number): Promise<Product | undefined> {

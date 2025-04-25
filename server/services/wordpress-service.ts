@@ -87,7 +87,7 @@ export class WordPressService {
 
       // Get product images
       try {
-        const products = await storage.getProductsForArticle(articleId);
+        const products = await storage.getProductsByArticleId(articleId);
         if (products.length > 0) {
           const sharp = require('sharp');
           

@@ -42,6 +42,61 @@ export class WordPressService {
     return { wpBaseUrl, username, password };
   }
 
+  async getRelevantCategories(articleTitle: string): Promise<number[]> {
+    const { wpBaseUrl, username, password } = this.getCredentials();
+    const auth = Buffer.from(`${username}:${password}`).toString('base64');
+
+    try {
+      const response = await fetch(`${wpBaseUrl}/wp-json/wp/v2/categories`, {
+        headers: {
+          'Authorization': `Basic ${auth}`
+        }
+      });
+
+      if (!response.ok) {
+        console.error("Failed to fetch categories from WordPress");
+        return [2]; // Default to Uncategorized
+      }
+
+      const categories = await response.json();
+      const relevantCategory = categories.find(cat => articleTitle.toLowerCase().includes(cat.name.toLowerCase()));
+
+      if (relevantCategory) {
+        return [relevantCategory.id];
+      } else {
+        //Create new category (replace with actual category creation logic)
+        const newCategoryName = this.extractCategoryName(articleTitle);
+        const newCategoryResponse = await fetch(`${wpBaseUrl}/wp-json/wp/v2/categories`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name: newCategoryName })
+        });
+
+        if (!newCategoryResponse.ok) {
+          console.error("Failed to create new category in WordPress");
+          return [2]; // Default to Uncategorized
+        }
+
+        const newCategory = await newCategoryResponse.json();
+        return [newCategory.id];
+      }
+    } catch (error) {
+      console.error("Error getting or creating relevant categories:", error);
+      return [2]; // Default to Uncategorized
+    }
+  }
+
+  private extractCategoryName(articleTitle: string): string {
+    // Implement logic to extract a suitable category name from the article title.  This is a placeholder.
+    //  A more robust implementation might use NLP techniques or predefined rules.
+    const words = articleTitle.split(' ');
+    return words.slice(0, 2).join(' ');
+  }
+
+
   async publishArticle(articleId: number) {
     console.log('[WordPressService] Starting article publish:', articleId);
 
@@ -67,7 +122,8 @@ export class WordPressService {
         body: JSON.stringify({
           title: article.title,
           content: article.content.replace(/<h1>.*?<\/h1>\s*/, ''), // Remove H1 title
-          status: 'publish'
+          status: 'publish',
+          categories: await this.getRelevantCategories(article.title)
         })
       });
 

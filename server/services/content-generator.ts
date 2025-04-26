@@ -93,18 +93,13 @@ export class ContentGenerator {
       // Step 6: Update keyword status
       await storage.updateKeywordStatus(keyword.id, "completed");
 
-      // Step 7: Publish to WordPress (skip if in test mode)
-      const isTestMode = process.env.TEST_MODE === 'true';
-      if (!isTestMode) {
-        try {
-          console.log(`[ContentGenerator] Publishing article to WordPress...`);
-          await wordpressService.publishArticle(article.id);
-          console.log(`[ContentGenerator] Successfully published to WordPress`);
-        } catch (error) {
-          console.error(`[ContentGenerator] WordPress publish failed:`, error);
-        }
-      } else {
-        console.log('[ContentGenerator] Test mode: Skipping WordPress publish');
+      // Step 7: Publish to WordPress
+      try {
+        console.log(`[ContentGenerator] Publishing article to WordPress...`);
+        await wordpressService.publishArticle(article.id);
+        console.log(`[ContentGenerator] Successfully published to WordPress`);
+      } catch (error) {
+        console.error(`[ContentGenerator] WordPress publish failed:`, error);
       }
 
       // Step 8: Log activity

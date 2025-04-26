@@ -89,11 +89,32 @@ export class WordPressService {
     }
   }
 
+  // Drop‐in replacement – put this inside WordPressService
   private extractCategoryName(articleTitle: string): string {
-    // Implement logic to extract a suitable category name from the article title.  This is a placeholder.
-    //  A more robust implementation might use NLP techniques or predefined rules.
-    const words = articleTitle.split(' ');
-    return words.slice(0, 2).join(' ');
+    // Words we don’t want at the start of a category
+    const TRIM_WORDS = [
+      "smart", "wifi", "wireless", "solar", "solar powered",
+      "remote", "bluetooth", "best", "top", "ultimate", "guide",
+      "7", "10", "2k"
+    ];
+
+    // 1️⃣  Grab the first capital-letter phrase (up to 4 words)
+    const match = articleTitle.match(
+      /([A-Z][A-Za-z0-9]*(\s+[A-Z][A-Za-z0-9]*){0,3})/
+    );
+    if (!match) return "General";
+
+    // 2️⃣  Strip marketing adjectives from the front
+    let phrase = match[0].trim();
+    for (const w of TRIM_WORDS) {
+      const regex = new RegExp(`^${w}\\s+`, "i");
+      phrase = phrase.replace(regex, "");
+    }
+
+    // 3️⃣  Keep it short: max 3 words
+    phrase = phrase.split(" ").slice(0, 3).join(" ");
+
+    return phrase || "General";
   }
 
 

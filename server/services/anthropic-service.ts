@@ -301,13 +301,13 @@ export class AnthropicService {
         let affiliateLinksHTML = "";
         if (affiliateLinks.length > 0) {
           const validAffiliateLinks = affiliateLinks.filter(
-            (link) => link.title && link.affiliateLink,
+            (link) => link.titlex && link.affiliateLink,
           );
           if (validAffiliateLinks.length > 0) {
             affiliateLinksHTML =
               `<div class="product-links">\n` +
               `<h2>Our Top Picks for the Year (2025)</h2>\n` +
-              `<ul>\n` +
+              `<ul style="list-style: disc; margin-left: 20px;">\n` +
               validAffiliateLinks
                 .map(
                   (link) =>

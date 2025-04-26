@@ -1,5 +1,5 @@
 import { amazonService } from "./amazon-service";
-import { openaiService } from "./openai-service";
+import { anthropicService } from "./anthropic-service";
 import { wordpressService } from "./wordpress-service";
 import { storage } from "../storage";
 import { type Keyword, type InsertArticle } from "@shared/schema";
@@ -57,7 +57,7 @@ export class ContentGenerator {
         })),
       });
 
-      const articleContent = await openaiService.generateArticleContent(
+      const articleContent = await anthropicService.generateArticleContent(
         keyword.primaryKeyword,
         { affiliateLinks: products },
         {

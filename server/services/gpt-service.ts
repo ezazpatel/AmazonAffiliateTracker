@@ -8,6 +8,38 @@ interface ArticleContent {
   snippet: string;
 }
 
+private trimToCompleteSentence(text: string): string {
+    if (text.endsWith(".") || text.endsWith("!") || text.endsWith("?")) {
+      return text;
+    }
+
+    const lastSentenceEnd = Math.max(
+      text.lastIndexOf(". "),
+      text.lastIndexOf("! "),
+      text.lastIndexOf("? "),
+    );
+
+    if (lastSentenceEnd > 0) {
+      return text.substring(0, lastSentenceEnd + 1);
+    }
+
+    const absoluteLastEnd = Math.max(
+      text.lastIndexOf("."),
+      text.lastIndexOf("!"),
+      text.lastIndexOf("?"),
+    );
+
+    if (absoluteLastEnd > 0) {
+      return text.substring(0, absoluteLastEnd + 1);
+    }
+
+    return text.trim();
+  }
+
+  private escRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
 const STYLE_GUIDELINES = `
 - Use varied sentence lengths to mimic human writing - mostly short sentences followed by a long sentence to drive home the point
 - The current year is 2025

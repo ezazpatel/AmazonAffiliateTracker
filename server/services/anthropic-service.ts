@@ -136,7 +136,7 @@ export class AnthropicService {
   - DO NOT mention yourself or the writing process like or how you are following the instructions. Return JUST THE CLEANED UP TITLE.
   - Keep the brand if available.
   - Keep the quantity if available (e.g., '2-pack').
-  - Keep the tone neutral and professional and avoid marketing language or promotional words like "best" or "amazing".
+  - Keep the tone neutral and professional, avoid marketing language or promotional words like "best" or "amazing".
   - Keep the product type (pager, bell, alarm, button, etc.)
   - Mention important features like 'wireless' or 'waterproof' if relevant.
   - Make it 60–80 characters

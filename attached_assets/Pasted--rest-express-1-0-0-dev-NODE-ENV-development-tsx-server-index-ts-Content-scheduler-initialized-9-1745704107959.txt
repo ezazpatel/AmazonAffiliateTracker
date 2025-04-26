@@ -1,0 +1,57 @@
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+Content scheduler initialized
+9:48:17 PM [express] serving on port 5001
+Failed to fetch pending keywords: error: relation "keywords" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getKeywords (/home/runner/workspace/server/storage.ts:96:26)
+    at async Scheduler.getPendingKeywords (/home/runner/workspace/server/services/scheduler.ts:93:28)
+    at async Scheduler.checkSchedules (/home/runner/workspace/server/services/scheduler.ts:49:24) {
+  length: 107,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '97',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+Error seeding initial activities: error: relation "activities" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async seedActivities (/home/runner/workspace/server/storage.ts:368:24) {
+  length: 109,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '60',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+9:48:20 PM [express] GET /api/wordpress/test 200 in 7ms
+9:48:21 PM [express] GET /api/keywords/upcoming 500 in 196ms :: {"message":"Failed to fetch upcoming…
+9:48:21 PM [express] GET /api/activities 500 in 201ms :: {"message":"Failed to fetch activities"}
+9:48:21 PM [express] GET /api/dashboard/stats 500 in 227ms :: {"message":"Failed to fetch dashboard …

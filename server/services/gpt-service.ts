@@ -62,7 +62,7 @@ Here's the input:
 "${rawTitle}"`;
 
     const response = await client.chat.completions.create({
-      model: "gpt-4-1106-preview",
+      model: "gpt-4.1-nano-2025-04-14",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.3,
     });
@@ -119,7 +119,7 @@ Here's the input:
       }`;
 
       const outlineResponse = await client.chat.completions.create({
-        model: "gpt-4-1106-preview",
+        model: "gpt-4.1-nano-2025-04-14",
         messages: [{ role: "user", content: outlinePrompt }],
         temperature: 0.7,
       });
@@ -132,7 +132,7 @@ Here's the input:
       ${STYLE_GUIDELINES}`;
 
       const excerptResponse = await client.chat.completions.create({
-        model: "gpt-4-1106-preview",
+        model: "gpt-4.1-nano-2025-04-14",
         messages: [{ role: "user", content: excerptPrompt }],
         temperature: 0.7,
       });
@@ -170,7 +170,7 @@ Here's the input:
       Format with <p> tags only.`;
 
       const introResponse = await client.chat.completions.create({
-        model: "gpt-4-1106-preview",
+        model: "gpt-4.1-nano-2025-04-14",
         messages: [{ role: "user", content: introPrompt }],
         temperature: 0.7,
       });
@@ -218,7 +218,7 @@ Here's the input:
       ${section.subheadings.map((sub, i) => `${i + 1}. ${sub}`).join("\n")}`;
 
         const productResponse = await client.chat.completions.create({
-          model: "gpt-4-1106-preview",
+          model: "gpt-4.1-nano-2025-04-14",
           messages: [{ role: "user", content: productPrompt }],
           temperature: 0.7,
         });
@@ -253,7 +253,7 @@ Here's the input:
       - Encourage the reader to take action and choose confidently`;
 
       const wrapResponse = await client.chat.completions.create({
-        model: "gpt-4-1106-preview",
+        model: "gpt-4.1-nano-2025-04-14",
         messages: [{ role: "user", content: wrapPrompt }],
         temperature: 0.7,
       });
@@ -269,7 +269,7 @@ Here's the input:
       - Begin the response with the required HTML tag (e.g., <h3>) and the actual content, with **no pre‑amble or meta commentary**.`;
 
       const faqResponse = await client.chat.completions.create({
-        model: "gpt-4-1106-preview",
+        model: "gpt-4.1-nano-2025-04-14",
         messages: [{ role: "user", content: faqPrompt }],
         temperature: 0.7,
       });

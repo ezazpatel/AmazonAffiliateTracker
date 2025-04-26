@@ -1,15 +1,87 @@
+
+import { gptService } from "./gpt-service";
 import { amazonService } from "./amazon-service";
-import { anthropicService } from "./anthropic-service";
 import { wordpressService } from "./wordpress-service";
 import { storage } from "../storage";
 import { type Keyword, type InsertArticle } from "@shared/schema";
 
 export class ContentGenerator {
   /**
+   * Generate content for a keyword in batch mode
+   */
+  private async generateBatchContent(keywords: Keyword[]): Promise<void> {
+    try {
+      const batch = await gptService.createBatch(keywords.map(k => ({
+        input: k.primaryKeyword,
+        custom_id: k.id.toString()
+      })));
+
+      // Update keyword statuses to pending
+      await Promise.all(keywords.map(k => 
+        storage.updateKeywordStatus(k.id, "pending")
+      ));
+
+      // Poll batch status
+      const pollInterval = setInterval(async () => {
+        const status = await gptService.getBatchStatus(batch.id);
+        
+        if (status.status === "completed") {
+          clearInterval(pollInterval);
+          await this.processBatchResults(status);
+        }
+      }, 60000); // Check every minute
+
+    } catch (error) {
+      console.error("Batch content generation failed:", error);
+      await Promise.all(keywords.map(k =>
+        storage.updateKeywordStatus(k.id, "failed")
+      ));
+      throw error;
+    }
+  }
+
+  private async processBatchResults(batchResults: any) {
+    for (const result of batchResults.completed) {
+      try {
+        const keywordId = parseInt(result.custom_id);
+        const keyword = await storage.getKeyword(keywordId);
+        
+        if (!keyword) continue;
+
+        const products = await amazonService.searchProducts(
+          keyword.primaryKeyword,
+          7
+        );
+
+        const articleData: InsertArticle = {
+          keywordId: keyword.id,
+          title: result.title,
+          content: result.content,
+          snippet: result.snippet,
+          status: "draft",
+        };
+
+        const article = await storage.addArticle(articleData);
+        await amazonService.addProductsToArticle(article.id, products);
+        await storage.updateKeywordStatus(keyword.id, "completed");
+        
+        await storage.addActivity({
+          activityType: "article_generated", 
+          message: `Article "${result.title}" generated for "${keyword.primaryKeyword}"`
+        });
+
+      } catch (error) {
+        console.error(`Failed to process batch result for keyword ${result.custom_id}:`, error);
+        await storage.updateKeywordStatus(parseInt(result.custom_id), "failed");
+      }
+    }
+  }
+
+  /**
    * Generate content for a keyword
    * This method orchestrates the full content generation process:
    * 1. Search Amazon for relevant products
-   * 2. Generate article content using Anthropic
+   * 2. Generate article content using GPT
    * 3. Save the article and products to storage
    */
   async generateContent(keyword: Keyword): Promise<void> {
@@ -18,18 +90,15 @@ export class ContentGenerator {
         `[ContentGenerator] Starting content generation for: ${keyword.primaryKeyword}`,
       );
 
-      // Both Amazon API and Anthropic API settings are now first checked` from environment variables
-      // in their respective services, so we don't need to manually check here.
-      // The amazonService and anthropicService will handle the API key validation.
-
       console.log(
         "[ContentGenerator] Step 1: Searching for Amazon products...",
       );
-      // Step 2: Search Amazon for relevant products
+
       const products = await amazonService.searchProducts(
         keyword.primaryKeyword,
         7,
       );
+
       console.log(
         `[ContentGenerator] Found ${products.length} products:`,
         products.map((p) => ({
@@ -44,26 +113,13 @@ export class ContentGenerator {
         throw new Error("No products found for this keyword");
       }
 
-      // Step 3: Generate article content using Anthropic
       console.log(
-        "[ContentGenerator] Step 2: Generating article content with Anthropic...",
+        "[ContentGenerator] Step 2: Generating article content with GPT...",
       );
-      console.log("[ContentGenerator] Passing affiliate data:", {
-        keyword: keyword.primaryKeyword,
-        productCount: products.length,
-        affiliateLinks: products.map((p) => ({
-          title: p.title,
-          asin: p.asin,
-        })),
-      });
 
-      const articleContent = await anthropicService.generateArticleContent(
+      const articleContent = await gptService.generateContent(
         keyword.primaryKeyword,
-        { affiliateLinks: products },
-        {
-          maxTokens: 4000,
-          temperature: 0.7,
-        },
+        { affiliateLinks: products }
       );
 
       console.log("[ContentGenerator] Step 3: Article content generated:", {
@@ -76,27 +132,21 @@ export class ContentGenerator {
         ).length,
       });
 
-      // Step 4: Create the article in storage
       const articleData: InsertArticle = {
         keywordId: keyword.id,
         title: articleContent.title,
         content: articleContent.content,
         snippet: articleContent.snippet,
-        status: "draft", // Start as draft until scheduled publish time
+        status: "draft",
       };
 
       const article = await storage.addArticle(articleData);
-
-      // Step 5: Add the products to the article
       await amazonService.addProductsToArticle(article.id, products);
-
-      // Step 6: Update keyword status
       await storage.updateKeywordStatus(keyword.id, "completed");
 
-      // Step 7: Log activity
       await storage.addActivity({
         activityType: "article_generated",
-        message: `Article "${articleContent.title}" was successfully generated for keyword "${keyword.primaryKeyword}"`,
+        message: `Article "${articleContent.title}" generated for "${keyword.primaryKeyword}"`,
       });
 
       console.log(
@@ -108,16 +158,13 @@ export class ContentGenerator {
         error,
       );
 
-      // Update keyword status to failed
       await storage.updateKeywordStatus(keyword.id, "failed");
 
-      // Log the failure
       await storage.addActivity({
         activityType: "generation_failed",
         message: `Failed to generate content for "${keyword.primaryKeyword}": ${error instanceof Error ? error.message : "Unknown error"}`,
       });
 
-      // Re-throw the error so the caller can handle it
       throw error;
     }
   }
@@ -137,15 +184,11 @@ export class ContentGenerator {
         throw new Error("Keyword not found");
       }
 
-      // Calculate the scheduled timestamp
       const scheduledDateTime = new Date(`${date}T${time}`);
 
-      // Check if the scheduled time is in the past
       if (scheduledDateTime <= new Date()) {
-        // If it's in the past, generate content immediately
         await this.generateContent(keyword);
       } else {
-        // Otherwise, the scheduler service will pick it up and process it at the right time
         console.log(
           `Keyword ${keywordId} scheduled for generation at ${date} ${time}`,
         );

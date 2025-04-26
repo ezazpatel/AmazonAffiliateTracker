@@ -8,7 +8,6 @@ import csvParser from "csv-parser";
 import { Readable } from "stream";
 import { contentGenerator } from "./services/content-generator";
 import { scheduler } from "./services/scheduler";
-import { wordpressService } from "./services/wordpress-service";
 
 // Set up multer for file uploads
 const upload = multer({ storage: multer.memoryStorage() });
@@ -16,19 +15,6 @@ const upload = multer({ storage: multer.memoryStorage() });
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize the scheduler
   scheduler.init();
-
-  // Test WordPress connection
-  app.get('/api/wordpress/test', async (req, res) => {
-    try {
-      const result = await wordpressService.testConnection();
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({ 
-        success: false, 
-        message: error instanceof Error ? error.message : 'Connection test failed' 
-      });
-    }
-  });
 
   // API Routes
   app.get("/api/dashboard/stats", async (req, res) => {
@@ -251,28 +237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Articles
-  app.post("/api/articles/:id/publish", async (req, res) => {
-  try {
-    console.log('[PublishEndpoint] Received publish request for article:', req.params.id);
-    
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      console.error('[PublishEndpoint] Invalid article ID:', req.params.id);
-      return res.status(400).json({ message: "Invalid article ID" });
-    }
-
-    if (!process.env.WP_BASE_URL || !process.env.WP_USERNAME || !process.env.WP_PASSWORD) {
-      return res.status(400).json({ message: "WordPress credentials not configured in environment variables" });
-    }
-
-    const result = await wordpressService.publishArticle(id);
-    res.json({ success: true, wordpressId: result.id });
-  } catch (error) {
-    res.status(500).json({ message: "Failed to publish to WordPress" });
-  }
-});
-
-app.get("/api/articles", async (req, res) => {
+  app.get("/api/articles", async (req, res) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const search = (req.query.search as string) || "";

@@ -118,6 +118,48 @@ export class AnthropicService {
     return text.trim();
   }
 
+  private escRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+  
+  /** Generate a cleaner, human-friendly display title from a raw Amazon product title */
+  private async generateDisplayTitle(rawTitle: string): Promise<string> {
+    const apiKey = await this.getApiKey();
+    const client = new Anthropic({ apiKey });
+    const ANTHROPIC_MODEL = "claude-3-5-haiku-latest";
+
+    const prompt = `You are helping rewrite product titles for a blog.
+  Given this raw product title, write a shorter, human-friendly title.
+
+  !Important Instructions:
+  
+  - DO NOT mention yourself or the writing process like or how you are following the instructions. Return JUST THE CLEANED UP TITLE.
+  - Keep the brand if available.
+  - Keep the quantity if available (e.g., '2-pack').
+  - Keep the tone neutral and professional and avoid marketing language or promotional words like "best" or "amazing".
+  - Keep the product type (pager, bell, alarm, button, etc.)
+  - Mention important features like 'wireless' or 'waterproof' if relevant.
+  - Make it 60–80 characters
+  - No promotional words like "best" or "amazing".
+
+  Example:
+  Input: "WiFi Wireless Caregiver Pager Call Button System Emergency Alert System Life Alert Button for Seniors Patient Disabled Elderly 1 Call Button 1 Watch Button 1 Receiver (only Supports 2.4GHz Wi-Fi)"
+  Output: "WiFi Caregiver Pager with Emergency Alert Button for Seniors"
+
+  Here’s the input:
+  "${rawTitle}"`;
+
+    const response = await client.messages.create({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 300,
+      temperature: 0.3,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const cleanedTitle = this.extractTextContent(response).trim();
+    return cleanedTitle;
+  }
+
   /**
    * Generate article content using Anthropic API
    * Creates an SEO-optimized affiliate article with proper product links and formatting
@@ -150,6 +192,10 @@ export class AnthropicService {
         const affiliateLinks = Array.isArray(post.affiliateLinks)
           ? post.affiliateLinks
           : [];
+        // Generate cleaner display titles
+        for (const product of affiliateLinks) {
+          product.cleanedTitle = await this.generateDisplayTitle(product.title);
+        }
         const mainKeywords =
           secondaryKeywords.length > 0 ? secondaryKeywords : keywords;
 
@@ -301,7 +347,7 @@ export class AnthropicService {
         let affiliateLinksHTML = "";
         if (affiliateLinks.length > 0) {
           const validAffiliateLinks = affiliateLinks.filter(
-            (link) => link.titlex && link.affiliateLink,
+            (link) => link.title && link.affiliateLink,
           );
           if (validAffiliateLinks.length > 0) {
             affiliateLinksHTML =
@@ -311,12 +357,13 @@ export class AnthropicService {
               validAffiliateLinks
                 .map(
                   (link) =>
-                    `  <li><a href="${link.affiliateLink}" target="_blank" rel="nofollow">${link.title}</a></li>`,
+                    `  <li><a href="${link.affiliateLink}" target="_blank" rel="nofollow">${link.cleanedTitle || link.title}</a></li>`,
                 )
                 .join("\n") +
               `\n</ul>\n</div>`;
           }
         }
+        
         const firstHeading =
           outlineResult.outline?.[0]?.heading ?? "First Section";
 
@@ -421,6 +468,17 @@ export class AnthropicService {
             /(<h2>[\s\S]*?<\/h2>)/,
             `$1\n${priceHtml}`,
           );
+
+          // ✅ clean displayed title inside the <h2> only
+          const cleanedTitle = product.cleanedTitle || product.title;
+          productContent = productContent.replace(
+            new RegExp(`<h2><a href="${product.affiliateLink}" target="_blank" rel="nofollow">.*?</a></h2>`, "i"),
+            `<h2><a href="${product.affiliateLink}" target="_blank" rel="nofollow">${cleanedTitle}</a></h2>`,
+          );
+
+          const safeRaw = this.escRegex(product.title);
+          const rawTitleRegex = new RegExp(safeRaw, "g");
+          productContent = productContent.replace(rawTitleRegex, cleanedTitle);
 
           // Safety: close <ul> if Claude forgot
           if (
